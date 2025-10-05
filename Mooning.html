@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mooning - Lunar Lander V2</title>
+  <title>Mooning - Vibe Coded V4</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
     
@@ -13,7 +13,14 @@
       background: #000; 
       font-family: 'Orbitron', monospace;
     }
-    canvas { display: block; }
+    canvas { 
+        display: block; 
+        /* --- CRISP PIXEL ART RENDERING --- */
+        image-rendering: -moz-crisp-edges;
+        image-rendering: -webkit-crisp-edges;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+    }
     
     .title-screen {
       position: fixed;
@@ -59,32 +66,7 @@
       z-index: 2;
     }
 
-    .credits, .start-btn {
-        z-index: 2;
-    }
-
-    #moon-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .floating-moon {
-      position: absolute;
-      background-color: #e0e0e0;
-      border-radius: 50%;
-      box-shadow: inset -10px -10px 20px rgba(0,0,0,0.2);
-      animation: float 20s infinite ease-in-out;
-    }
-
-    @keyframes float {
-      0% { transform: translateY(0px) translateX(0px) rotate(0deg); }
-      50% { transform: translateY(-50px) translateX(40px) rotate(10deg); }
-      100% { transform: translateY(0px) translateX(0px) rotate(0deg); }
-    }
+    .credits, .start-btn { z-index: 2; }
     
     .credits {
       color: #ff00ff;
@@ -159,11 +141,6 @@
       z-index: 1;
     }
     
-    @keyframes grid-move {
-      0% { background-position: 0 0; }
-      100% { background-position: 50px 50px; }
-    }
-    
     .hud {
       position: fixed;
       top: 20px;
@@ -178,19 +155,10 @@
       z-index: 10;
     }
     
-    .hud div {
-      margin: 5px 0;
-      text-shadow: 0 0 5px rgba(0,255,0,0.5);
-    }
+    .hud div { margin: 5px 0; text-shadow: 0 0 5px rgba(0,255,0,0.5); }
+    .hud .critical { color: #f00; animation: blink 0.5s infinite; }
     
-    .hud .critical {
-      color: #f00;
-      animation: blink 0.5s infinite;
-    }
-    
-    @keyframes blink {
-      50% { opacity: 0.5; }
-    }
+    @keyframes blink { 50% { opacity: 0.5; } }
     
     .msg {
       position: fixed;
@@ -204,6 +172,21 @@
       text-shadow: 0 0 20px rgba(0,255,255,0.8);
       display: none;
       z-index: 10;
+    }
+
+    .popup-msg {
+        position: fixed;
+        bottom: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 255, 0, 0.8);
+        color: #000;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 16px;
+        z-index: 100;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
     }
     
     .controls {
@@ -228,20 +211,17 @@
       opacity: 0.7;
       transition: opacity 0.3s;
     }
-    .sound-toggle:hover {
-      opacity: 1;
-    }
+    .sound-toggle:hover { opacity: 1; }
   </style>
 </head>
 <body>
   <div class="title-screen" id="titleScreen">
     <div class="retro-grid"></div>
-    <div id="moon-container"></div>
     <div class="title">MOONING</div>
     <div class="subtitle">VIBE CODED</div>
     <div class="credits">by Rajveer</div>
     <button class="start-btn" onclick="startGame()">START MISSION</button>
-    <div class="sound-toggle" id="soundToggle">🔊</div>
+    <div class="sound-toggle" id="soundToggle">🔇</div>
   </div>
   
   <canvas id="c"></canvas>
@@ -256,6 +236,7 @@
   </div>
   
   <div class="msg" id="msg"></div>
+  <div class="popup-msg" id="popupMsg"></div>
   
   <div class="controls" id="controls">
     W/↑ THRUST | A/D ROTATE | R RESTART | ESC MENU
@@ -267,11 +248,17 @@ const ctx = canvas.getContext('2d');
 let W = canvas.width = window.innerWidth;
 let H = canvas.height = window.innerHeight;
 
+// --- NEW & MODIFIED GLOBALS ---
+let moonPatternFill;
+let godModeEnabled = false;
+const keySequence = [];
+const GOD_MODE_SEQUENCE = 'god';
+
 // Audio Context
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const audioCtx = new AudioContext();
 let isAudioUnlocked = false;
-let isMusicMuted = false;
+let isMusicMuted = true; // --- CHANGE: Start muted by default
 
 // Sound generators
 const sounds = {
@@ -310,15 +297,16 @@ function drawParticles() {
   });
 }
 
-// New: Function to resume audio context on first user interaction
 function unlockAudio() {
     if (!isAudioUnlocked) {
         if (audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
         isAudioUnlocked = true;
-        startTitleMusic();
-        // Remove listeners after first unlock
+        // Don't start music automatically if muted
+        if (!isMusicMuted) {
+            startTitleMusic();
+        }
         document.body.removeEventListener('click', unlockAudio);
         document.body.removeEventListener('keydown', unlockAudio);
     }
@@ -326,53 +314,41 @@ function unlockAudio() {
 document.body.addEventListener('click', unlockAudio);
 document.body.addEventListener('keydown', unlockAudio);
 
-// Create thrust sound
 function createThrustSound() {
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   const filter = audioCtx.createBiquadFilter();
-  
   osc.type = 'sawtooth';
   osc.frequency.value = 80;
   filter.type = 'lowpass';
   filter.frequency.value = 200;
-  
   osc.connect(filter);
   filter.connect(gain);
   gain.connect(audioCtx.destination);
-  
   gain.gain.value = 0;
   osc.start();
-  
   return { osc, gain, filter };
 }
 
-// Create ambient moon sound
 function createAmbience() {
   const osc1 = audioCtx.createOscillator();
   const osc2 = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   const filter = audioCtx.createBiquadFilter();
-  
   osc1.type = 'sine';
   osc1.frequency.value = 60;
   osc2.type = 'sine';
   osc2.frequency.value = 90;
-  
   filter.type = 'lowpass';
   filter.frequency.value = 100;
   filter.Q.value = 15;
-  
   osc1.connect(filter);
   osc2.connect(filter);
   filter.connect(gain);
   gain.connect(audioCtx.destination);
-  
-  gain.gain.value = 0.03;
-  
+  gain.gain.value = isMusicMuted ? 0 : 0.03;
   osc1.start();
   osc2.start();
-  
   const lfo = audioCtx.createOscillator();
   const lfoGain = audioCtx.createGain();
   lfo.frequency.value = 0.2;
@@ -380,44 +356,34 @@ function createAmbience() {
   lfo.connect(lfoGain);
   lfoGain.connect(filter.frequency);
   lfo.start();
-  
   return { gain };
 }
 
-// Create title music
 function createMusic() {
   if (isMusicMuted) return null;
-  
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   const filter = audioCtx.createBiquadFilter();
-  
   osc.type = 'square';
   filter.type = 'lowpass';
   filter.frequency.value = 800;
-  
   osc.connect(filter);
   filter.connect(gain);
   gain.connect(audioCtx.destination);
-  
   gain.gain.value = 0.05;
-  
   const notes = [110, 130, 165, 130, 110, 98, 110, 130];
   let noteIndex = 0;
-  
   function playNote() {
     osc.frequency.setValueAtTime(notes[noteIndex], audioCtx.currentTime);
     noteIndex = (noteIndex + 1) % notes.length;
   }
-  
   osc.start();
   const interval = setInterval(playNote, 400);
-  
   return { gain, stop: () => { clearInterval(interval); osc.stop(); } };
 }
 
 function startTitleMusic() {
-  if (sounds.music) return;
+  if (sounds.music || isMusicMuted) return;
   sounds.music = createMusic();
 }
 
@@ -433,18 +399,14 @@ function stopTitleMusic() {
   }
 }
 
-// Create crash/land sound
 function playEffect(type) {
-  if (!isAudioUnlocked) return;
-  
+  if (!isAudioUnlocked || isMusicMuted) return;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   const filter = audioCtx.createBiquadFilter();
-  
   osc.connect(filter);
   filter.connect(gain);
   gain.connect(audioCtx.destination);
-  
   if (type === 'crash') {
     osc.type = 'sawtooth';
     osc.frequency.value = 50;
@@ -453,16 +415,8 @@ function playEffect(type) {
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
     filter.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 1);
-    
-    // Crash particles
     for (let i = 0; i < 30; i++) {
-      createParticle(
-        ship.x,
-        ship.y,
-        (Math.random() - 0.5) * 6,
-        (Math.random() - 0.5) * 6,
-        'rgb(200, 200, 200)'
-      );
+      createParticle(ship.x, ship.y, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, 'rgb(200, 200, 200)');
     }
   } else {
     osc.type = 'sine';
@@ -471,119 +425,116 @@ function playEffect(type) {
     gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
     osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.5);
   }
-  
   osc.start();
   osc.stop(audioCtx.currentTime + 1.5);
 }
 
 // Game State and Entities
 let gameState = 'title'; // title, playing, landed, crashed, exploring
-
 const SHIP_GRAVITY = 0.02;
 const ASTRO_GRAVITY = 0.05;
 const JUMP_FORCE = -2.5;
 const MOVE_SPEED = 1.5;
 
-let ship = {
-  x: W/2,
-  y: 100,
-  vx: 0,
-  vy: 0,
-  angle: 0,
-  fuel: 100,
-  thrusting: false,
-  legExtension: 0
-};
-
-let astronaut = {
-  x: 0,
-  y: 0,
-  vx: 0,
-  vy: 0,
-  w: 8,
-  h: 16,
-  onGround: false,
-  visible: false
-};
-
-let camera = {
-  x: 0
-};
-
-// Terrain variables
+let ship = { x: W/2, y: 100, vx: 0, vy: 0, angle: 0, fuel: 100, thrusting: false, legExtension: 0 };
+let astronaut = { x: 0, y: 0, vx: 0, vy: 0, w: 8, h: 16, onGround: false, visible: false };
+let camera = { x: 0 };
 let terrain = [];
-let craters = [];
 let fuelPickups = [];
 let pad = { x: 0, y: 0, w: 120 };
 const TERRAIN_WIDTH = W * 5;
 const TERRAIN_POINTS = 300;
 
-// Moving stars
 let stars = [];
 for(let i = 0; i < 200; i++) {
-  stars.push({
-    x: Math.random() * W,
-    y: Math.random() * H,
-    size: Math.random() * 2,
-    speed: 0.1 + Math.random() * 0.3
-  });
+  stars.push({ x: Math.random() * W, y: Math.random() * H, size: Math.random() * 2, speed: 0.1 + Math.random() * 0.3 });
 }
 
-// Generate wider, looping moon terrain
+// --- MORE PIXELATED PATTERN FUNCTION ---
+function createMoonPattern() {
+    const patternCanvas = document.createElement('canvas');
+    const pCtx = patternCanvas.getContext('2d');
+    const size = 16; // Smaller canvas for larger perceived pixels
+    const pixelSize = 2; // Draw 2x2 blocks for a chunkier feel
+    patternCanvas.width = size;
+    patternCanvas.height = size;
+
+    const colors = ['#6a6a73', '#878792', '#505059'];
+    pCtx.fillStyle = colors[0]; // Base color
+    pCtx.fillRect(0, 0, size, size);
+
+    // Draw on a grid for a more intentional pattern
+    for (let x = 0; x < size; x += pixelSize * 2) {
+        for (let y = 0; y < size; y += pixelSize * 2) {
+            if (Math.random() > 0.5) {
+                pCtx.fillStyle = colors[Math.floor(Math.random() * 2) + 1];
+                pCtx.fillRect(x + (Math.random() - 0.5) * pixelSize, y + (Math.random() - 0.5) * pixelSize, pixelSize, pixelSize);
+            }
+        }
+    }
+    return patternCanvas;
+}
+
 function makeTerrain() {
   terrain = [];
-  craters = [];
   fuelPickups = [];
   
   let baseHeight = H * 0.7;
   
+  // Use a combination of sines for smooth, rolling hills
   for(let i = 0; i <= TERRAIN_POINTS; i++) {
     let x = (TERRAIN_WIDTH / TERRAIN_POINTS) * i;
-    let y = baseHeight + Math.sin(i * 0.3) * 30 + Math.sin(i * 0.7) * 20 + Math.random() * 10;
+    let y = baseHeight + Math.sin(i * 0.3) * 30 + Math.sin(i * 0.7) * 20;
     terrain.push({x, y});
   }
   
-  // Generate craters that sit ON the terrain
-  for(let i = 0; i < 40; i++) {
-    const craterX = Math.random() * TERRAIN_WIDTH;
-    const groundY = getGroundY(craterX);
-    craters.push({
-      x: craterX,
-      y: groundY, // Now sits exactly on surface
-      r: 20 + Math.random() * 40,
-      depth: 0.3 + Math.random() * 0.4
-    });
-  }
-  
-  // Generate fuel pickups on terrain
+  // --- FIX SEAM: Ensure the last point connects perfectly to the first for seamless wrapping ---
+  let firstY = baseHeight + Math.sin(0 * 0.3) * 30 + Math.sin(0 * 0.7) * 20;
+  terrain[TERRAIN_POINTS] = { x: TERRAIN_WIDTH, y: firstY };
+
   for(let i = 0; i < 8; i++) {
     const pickupX = Math.random() * TERRAIN_WIDTH;
     const groundY = getGroundY(pickupX);
-    fuelPickups.push({
-      x: pickupX,
-      y: groundY - 10, // Slightly above ground for visibility
-      collected: false
-    });
+    fuelPickups.push({ x: pickupX, y: groundY - 10, collected: false });
   }
   
   let padIndex = Math.floor(TERRAIN_POINTS / 10);
   pad.x = terrain[padIndex].x - 60;
   pad.y = terrain[padIndex].y;
-  pad.w = 120;
   
   for(let i = padIndex - 2; i <= padIndex + 2; i++) {
     if(terrain[i]) terrain[i].y = pad.y;
   }
 }
 
-// Controls
+// --- NEW FUNCTION for popups ---
+function showPopup(message) {
+    const popup = document.getElementById('popupMsg');
+    popup.textContent = message;
+    popup.style.opacity = '1';
+    setTimeout(() => {
+        popup.style.opacity = '0';
+    }, 2000);
+}
+
 const keys = {};
 window.addEventListener('keydown', e => {
-  keys[e.key.toLowerCase()] = true;
+  const key = e.key.toLowerCase();
+  keys[key] = true;
   
-  if(e.key.toLowerCase() === 'r' && gameState !== 'title') reset();
-  if(e.key.toLowerCase() === 'escape' && gameState !== 'title') {
-    // Return to title without resetting
+  if (key.length === 1) { // Only track single character keys for cheat code
+    keySequence.push(key);
+    if (keySequence.length > GOD_MODE_SEQUENCE.length) {
+        keySequence.shift();
+    }
+    if (keySequence.join('') === GOD_MODE_SEQUENCE) {
+        godModeEnabled = true;
+        showPopup('God Mode Enabled');
+    }
+  }
+
+  if(key === 'r' && gameState !== 'title') reset();
+  if(key === 'escape' && gameState !== 'title') {
     document.getElementById('titleScreen').classList.remove('hidden');
     stopTitleMusic();
     startTitleMusic();
@@ -592,21 +543,17 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
-// Sound toggle
 document.getElementById('soundToggle').addEventListener('click', () => {
   isMusicMuted = !isMusicMuted;
   document.getElementById('soundToggle').textContent = isMusicMuted ? '🔇' : '🔊';
   
-  if (isMusicMuted && sounds.music) {
-    sounds.music.gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
-    setTimeout(() => {
-      if (sounds.music) {
-        sounds.music.stop();
-        sounds.music = null;
-      }
-    }, 500);
-  } else if (!isMusicMuted && gameState === 'title') {
-    startTitleMusic();
+  if (isMusicMuted) {
+    stopTitleMusic();
+    if(sounds.ambience) sounds.ambience.gain.gain.value = 0;
+  } else {
+    unlockAudio(); // Important for first click
+    if (gameState === 'title') startTitleMusic();
+    if(sounds.ambience) sounds.ambience.gain.gain.value = 0.03;
   }
 });
 
@@ -618,12 +565,9 @@ window.addEventListener('resize', () => {
 function startGame() {
   unlockAudio();
   stopTitleMusic();
-  
   if (!sounds.thrust) sounds.thrust = createThrustSound();
   if (!sounds.ambience) sounds.ambience = createAmbience();
-  
   document.getElementById('titleScreen').classList.add('hidden');
-  
   gameState = 'playing';
   reset();
 }
@@ -636,14 +580,10 @@ function reset() {
   ship.angle = 0;
   ship.fuel = 100;
   ship.legExtension = 0;
-  
   astronaut.visible = false;
   camera.x = ship.x - W / 2;
-
-  // Reset fuel pickups
   fuelPickups.forEach(p => p.collected = false);
   document.getElementById('fuelPacks').textContent = '0';
-
   document.getElementById('msg').style.display = 'none';
   document.getElementById('controls').innerHTML = 'W/↑ THRUST | A/D ROTATE | R RESTART | ESC MENU';
   gameState = 'playing';
@@ -661,21 +601,16 @@ function getGroundY(xPos) {
 }
 
 function endGame(msg, success) {
+  gameState = success ? 'landed' : 'crashed';
+  document.getElementById('msg').textContent = success ? msg + " | 'O' to Explore | Thrust to Take-Off" : msg + ' [R to restart]';
+  document.getElementById('msg').style.display = 'block';
+  document.getElementById('msg').style.color = success ? '#0f0' : '#f00';
   if (success) {
-    gameState = 'landed';
-    document.getElementById('msg').textContent = msg + " | 'O' to Explore | Thrust to Take-Off";
-    ship.y = pad.y - 15;
+    ship.y = getGroundY(ship.x) - 15; // Set y precisely on the ground
     ship.vy = 0;
     ship.vx = 0;
     ship.angle = 0;
-  } else {
-    gameState = 'crashed';
-    document.getElementById('msg').textContent = msg + ' [R to restart]';
   }
-  
-  document.getElementById('msg').style.display = 'block';
-  document.getElementById('msg').style.color = success ? '#0f0' : '#f00';
-  
   if(sounds.thrust) sounds.thrust.gain.gain.value = 0;
 }
 
@@ -686,42 +621,34 @@ function updateShip() {
   ship.thrusting = (keys['arrowup'] || keys['w']) && ship.fuel > 0;
   
   if(sounds.thrust && isAudioUnlocked) {
-    sounds.thrust.gain.gain.value = ship.thrusting ? 0.2 : 0;
+    sounds.thrust.gain.gain.value = (ship.thrusting && !isMusicMuted) ? 0.2 : 0;
     if (ship.thrusting) sounds.thrust.filter.frequency.value = 200 + Math.random() * 50;
   }
   
   if(ship.thrusting) {
-    ship.fuel -= 0.5;
-    if (ship.fuel < 0) ship.fuel = 0;
+    if (!godModeEnabled) {
+        ship.fuel -= 0.5;
+        if (ship.fuel < 0) ship.fuel = 0;
+    }
     ship.vx += Math.sin(ship.angle) * 0.1;
     ship.vy -= Math.cos(ship.angle) * 0.1;
     
-    // Thrust particles
     const flameX = ship.x + Math.sin(ship.angle) * 8;
     const flameY = ship.y + Math.cos(ship.angle) * 8;
     for (let i = 0; i < 2; i++) {
-      createParticle(
-        flameX,
-        flameY,
-        ship.vx + (Math.random() - 0.5) * 2,
-        ship.vy + 1 + Math.random() * 2,
-        'rgb(255, 150, 0)'
-      );
+      createParticle(flameX, flameY, ship.vx + (Math.random() - 0.5) * 2, ship.vy + 1 + Math.random() * 2, 'rgb(255, 150, 0)');
     }
   }
   
   ship.vy += SHIP_GRAVITY;
   ship.vx *= 0.999;
   ship.vy *= 0.999;
-  
   ship.x += ship.vx;
   ship.y += ship.vy;
-  
   ship.x = ((ship.x % TERRAIN_WIDTH) + TERRAIN_WIDTH) % TERRAIN_WIDTH;
   
   const groundY = getGroundY(ship.x);
   const altitude = groundY - ship.y - 15;
-
   ship.legExtension = altitude < 100 ? Math.min(1, ship.legExtension + 0.1) : Math.max(0, ship.legExtension - 0.1);
   
   if (altitude <= 0) {
@@ -730,22 +657,22 @@ function updateShip() {
     let hSpeed = Math.abs(ship.vx);
     let upright = Math.abs(ship.angle) < 0.3;
     
-    if (onPad && vSpeed < 1.5 && hSpeed < 0.8 && upright) {
-      endGame('PERFECT LANDING!', true);
+    // --- MODIFIED LANDING LOGIC ---
+    if (vSpeed < 1.5 && hSpeed < 0.8 && upright) {
+      const message = onPad ? 'PERFECT LANDING!' : 'SAFE LANDING!';
+      endGame(message, true);
       playEffect('land');
     } else {
-      let reason = !onPad ? 'MISSED PAD' : !upright ? 'BAD ANGLE' : 'TOO FAST';
+      let reason = !upright ? 'BAD ANGLE' : 'TOO FAST';
       endGame(`CRASHED! ${reason}`, false);
       playEffect('crash');
     }
   }
   
-  // Check fuel pickup collision (ship)
   fuelPickups.forEach(pickup => {
     if (!pickup.collected && Math.hypot(ship.x - pickup.x, ship.y - pickup.y) < 20) {
       pickup.collected = true;
-      const packs = parseInt(document.getElementById('fuelPacks').textContent) + 1;
-      document.getElementById('fuelPacks').textContent = packs;
+      document.getElementById('fuelPacks').textContent = parseInt(document.getElementById('fuelPacks').textContent) + 1;
     }
   });
 }
@@ -776,23 +703,19 @@ function updateAstronaut() {
   
   astronaut.x = ((astronaut.x % TERRAIN_WIDTH) + TERRAIN_WIDTH) % TERRAIN_WIDTH;
   
-  // Check fuel pickup collision (astronaut)
   fuelPickups.forEach(pickup => {
     if (!pickup.collected && Math.hypot(astronaut.x - pickup.x, astronaut.y - pickup.y) < 15) {
       pickup.collected = true;
-      const packs = parseInt(document.getElementById('fuelPacks').textContent) + 1;
-      document.getElementById('fuelPacks').textContent = packs;
+      document.getElementById('fuelPacks').textContent = parseInt(document.getElementById('fuelPacks').textContent) + 1;
     }
   });
   
-  // Check if astronaut returns to ship with fuel packs
   const dist = Math.hypot(astronaut.x - ship.x, astronaut.y - ship.y);
   if (dist < 50) {
     const fuelPacksCount = parseInt(document.getElementById('fuelPacks').textContent);
     if (fuelPacksCount > 0) {
       ship.fuel = 100;
       document.getElementById('fuelPacks').textContent = '0';
-      // Show message
       const msgEl = document.getElementById('msg');
       msgEl.textContent = 'FUEL DEPOSITED!';
       msgEl.style.display = 'block';
@@ -811,7 +734,6 @@ function update(dt) {
   });
 
   updateParticles();
-
   const controlsEl = document.getElementById('controls');
 
   switch (gameState) {
@@ -838,7 +760,6 @@ function update(dt) {
     case 'exploring':
       updateAstronaut();
       camera.x = astronaut.x - W / 2;
-
       const dist = Math.hypot(astronaut.x - ship.x, astronaut.y - ship.y);
       if (dist < 50) {
         controlsEl.innerHTML = "Press 'O' to board ship";
@@ -846,7 +767,9 @@ function update(dt) {
           gameState = 'landed';
           astronaut.visible = false;
           camera.x = ship.x - W / 2;
-          document.getElementById('msg').textContent = "PERFECT LANDING! | 'O' to Explore | Thrust to Take-Off";
+          const onPad = ship.x > pad.x && ship.x < pad.x + pad.w;
+          const message = onPad ? 'PERFECT LANDING!' : 'SAFE LANDING!';
+          document.getElementById('msg').textContent = message + " | 'O' to Explore | Thrust to Take-Off";
           document.getElementById('msg').style.display = 'block';
           delete keys['o'];
         }
@@ -859,40 +782,32 @@ function update(dt) {
 
 function drawAstronaut() {
   if (!astronaut.visible) return;
-  
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(astronaut.x, astronaut.y, astronaut.w, astronaut.h - 4);
   ctx.fillRect(astronaut.x - 1, astronaut.y - 6, astronaut.w + 2, 6);
-  
   ctx.fillStyle = '#000000';
   ctx.fillRect(astronaut.x + 4, astronaut.y - 5, 3, 4);
 }
 
 function drawWorld() {
-  let moonGradient = ctx.createLinearGradient(0, H * 0.6, 0, H);
-  moonGradient.addColorStop(0, '#c0c0c0');
-  moonGradient.addColorStop(0.3, '#a0a0a0');
-  moonGradient.addColorStop(1, '#808080');
-  
-  ctx.fillStyle = moonGradient;
+  ctx.fillStyle = moonPatternFill;
   ctx.beginPath();
-  ctx.moveTo(0, H);
+  ctx.moveTo(-1, H); // Start slightly left to prevent seam
   terrain.forEach(p => ctx.lineTo(p.x, p.y));
-  ctx.lineTo(TERRAIN_WIDTH, H);
-  ctx.lineTo(0, H);
+  ctx.lineTo(TERRAIN_WIDTH + 1, H); // End slightly right
+  ctx.closePath();
   ctx.fill();
   
-  // Draw craters (now properly on surface)
-  craters.forEach(c => {
-    ctx.fillStyle = `rgba(96, 96, 96, ${c.depth})`;
-    ctx.beginPath();
-    ctx.ellipse(c.x, c.y, c.r, c.r * 0.3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#999';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  });
-  
+  // Add a highlight to the top edge for a 3D pixel-art effect
+  ctx.strokeStyle = '#878792'; // A lighter grey from our pattern
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(terrain[0].x, terrain[0].y);
+  for(let i = 1; i < terrain.length; i++) {
+      ctx.lineTo(terrain[i].x, terrain[i].y);
+  }
+  ctx.stroke();
+
   // Draw fuel pickups
   fuelPickups.forEach(pickup => {
     if (!pickup.collected) {
@@ -903,7 +818,6 @@ function drawWorld() {
       ctx.strokeStyle = '#0ff';
       ctx.lineWidth = 2;
       ctx.stroke();
-      
       if (Math.sin(Date.now() * 0.01) > 0) {
         ctx.fillStyle = '#0ff';
         ctx.beginPath();
@@ -915,14 +829,12 @@ function drawWorld() {
   
   ctx.fillStyle = '#ffff00';
   ctx.fillRect(pad.x, pad.y, pad.w, 4);
-  
   ctx.fillStyle = '#ff0000';
   ctx.fillRect(pad.x, pad.y - 2, 10, 2);
   ctx.fillRect(pad.x + pad.w - 10, pad.y - 2, 10, 2);
   ctx.fillRect(pad.x + pad.w/2 - 5, pad.y - 2, 10, 2);
   
-  let blink = Math.sin(Date.now() * 0.005) > 0;
-  if(blink) {
+  if(Math.sin(Date.now() * 0.005) > 0) {
     ctx.fillStyle = '#0f0';
     ctx.beginPath();
     ctx.arc(pad.x + 10, pad.y, 3, 0, Math.PI * 2);
@@ -937,7 +849,6 @@ function drawWorld() {
   let bodyGradient = ctx.createLinearGradient(-8, -12, 8, 12);
   bodyGradient.addColorStop(0, '#fff');
   bodyGradient.addColorStop(1, '#ccc');
-  
   ctx.fillStyle = bodyGradient;
   ctx.beginPath();
   ctx.moveTo(0, -12);
@@ -950,7 +861,6 @@ function drawWorld() {
   ctx.beginPath();
   ctx.arc(0, -3, 4, 0, Math.PI * 2);
   ctx.fill();
-  
   ctx.fillStyle = 'rgba(100, 200, 255, 0.6)';
   ctx.beginPath();
   ctx.arc(-1, -4, 2, 0, Math.PI * 2);
@@ -999,10 +909,10 @@ function drawWorld() {
 }
 
 function draw() {
-  let gradient = ctx.createLinearGradient(0, 0, 0, H);
-  gradient.addColorStop(0, '#000');
-  gradient.addColorStop(1, '#0a0a1a');
-  ctx.fillStyle = gradient;
+  ctx.imageSmoothingEnabled = false; // Keep pixels crisp
+
+  // --- REMOVED BLUE TINT - SOLID DARK BACKGROUND ---
+  ctx.fillStyle = '#050508';
   ctx.fillRect(0, 0, W, H);
   
   ctx.fillStyle = '#fff';
@@ -1015,6 +925,7 @@ function draw() {
   ctx.save();
   ctx.translate(-camera.x, 0);
 
+  // Draw main world and its two wrapped copies for seamless scrolling
   drawWorld();
   ctx.save();
   ctx.translate(-TERRAIN_WIDTH, 0);
@@ -1031,8 +942,8 @@ function draw() {
   ctx.restore();
   
   // Update HUD
-  document.getElementById('fuel').textContent = Math.round(ship.fuel);
-  document.getElementById('fuel').className = ship.fuel < 20 ? 'critical' : '';
+  document.getElementById('fuel').textContent = godModeEnabled ? '∞' : Math.round(ship.fuel);
+  document.getElementById('fuel').className = ship.fuel < 20 && !godModeEnabled ? 'critical' : '';
   const altitude = gameState === 'exploring' ? getGroundY(astronaut.x) - astronaut.y - astronaut.h : getGroundY(ship.x) - ship.y - 15;
   document.getElementById('alt').textContent = Math.round(altitude);
   document.getElementById('vspeed').textContent = (ship.vy * 50).toFixed(1);
@@ -1040,38 +951,22 @@ function draw() {
   document.getElementById('angle').textContent = Math.round((ship.angle * 180 / Math.PI) % 360);
 }
 
-// Game loop
 let lastTime = 0;
 function loop(time) {
   let dt = (time - lastTime) / 1000;
   lastTime = time;
-  
   update(dt);
   draw();
   requestAnimationFrame(loop);
 }
 
-// Initialize
-function initTitleScreen() {
-    const container = document.getElementById('moon-container');
-    for (let i = 0; i < 10; i++) {
-        const moon = document.createElement('div');
-        moon.className = 'floating-moon';
-        const size = Math.random() * 80 + 20;
-        moon.style.width = `${size}px`;
-        moon.style.height = `${size}px`;
-        moon.style.left = `${Math.random() * 100}%`;
-        moon.style.top = `${Math.random() * 100}%`;
-        moon.style.opacity = Math.random() * 0.3 + 0.1;
-        moon.style.animationDuration = `${Math.random() * 20 + 15}s`;
-        moon.style.animationDelay = `${Math.random() * 10}s`;
-        container.appendChild(moon);
-    }
-}
-
-initTitleScreen();
+// --- INITIALIZATION ---
 makeTerrain();
+const patternCanvas = createMoonPattern();
+moonPatternFill = ctx.createPattern(patternCanvas, 'repeat');
 requestAnimationFrame(loop);
+
 </script>
 </body>
 </html>
+
