@@ -287,20 +287,29 @@
     }
 
     .undertale-input {
-      display: none;
+      display: inline-block;
       background: transparent;
       border: none;
       border-bottom: 2px solid #fff;
       color: #fff;
       font-family: 'Press Start 2P', monospace;
       font-size: 12px;
-      width: 50%;
-      margin-left: 10px;
+  width: 0;
+  margin-left: 0;
       padding: 4px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease, width 0.15s ease;
     }
     .undertale-input:focus {
       outline: none;
       border-bottom-color: #0f0;
+    }
+    .undertale-box.asking-name .undertale-input {
+      width: 50%;
+      margin-left: 10px;
+      opacity: 1;
+      pointer-events: auto;
     }
   </style>
 </head>
@@ -349,34 +358,86 @@ const SHIP_GRAVITY = 0.02;
 const ASTRO_GRAVITY = 0.05;
 const JUMP_FORCE = -2.5;
 const MOVE_SPEED = 1.5;
+// Thrust ramp parameters (simple inertia feel without complex physics)
+const MAX_THRUST_POWER = 0.2;        // Existing feel at full burn
+const THRUST_RAMP_UP = 0.035;        // How fast throttle approaches 1 while holding thrust
+const THRUST_RAMP_DOWN = 0.08;       // How fast throttle decays when released
 
-let ship = { x: W/2, y: 100, vx: 0, vy: 0, angle: 0, fuel: 100, thrusting: false, legExtension: 0, firstLegTouchTime: null };
+let ship = { x: W/2, y: 100, vx: 0, vy: 0, angle: 0, fuel: 100, thrusting: false, throttle: 0, legExtension: 0, firstLegTouchTime: null };
 let astronaut = { x: 0, y: 0, vx: 0, vy: 0, w: 8, h: 16, onGround: false, visible: false, name: null };
 let camera = { x: 0, y: 0 };
 let terrain = [];
 let fuelPickups = [];
 let monolith = { x: 0, y: 0, w: 20, h: 80 };
 let pad = { x: 0, y: 0, w: 120 };
-const TERRAIN_WIDTH = W * 5;
+const TERRAIN_WIDTH = W * 10;
 const TERRAIN_POINTS = 300;
 
 // Initialize core game state
 let godModeEnabled = false;
 const keySequence = [];
 const GOD_MODE_SEQUENCE = 'god';
-let undertaleBoxActive = false;
 let firstLandingDone = false;
 let typewriterInterval = null;
-let currentDialogueIndex = 0;
+let monolithDialogueSeen = false;
+let astronautNameKnown = false;
+let lily = { x: 0, y: 0, picked: false };
+let lilyPromptShown = false;
+let stuntTracker = { lastAngle: 0, accum: 0, cooldown: 0 };
+
+const dialogueState = {
+  active: false,
+  queue: [],
+  index: -1,
+  waitingForInput: false,
+  askNameAt: null,
+  afterNameLines: null,
+  onComplete: null,
+  context: null
+};
+
+// DIALOGUE AUTHOR NOTE:
+// Use startDialogueSequence([...lines], { askNameAt, afterNameLines, onComplete })
+// for every narrative beat. Keep all new behavior inside these helpers so gameplay
+// loops never care about dialogue details.
+
+function resetDialogueState() {
+  dialogueState.active = false;
+  dialogueState.queue = [];
+  dialogueState.index = -1;
+  dialogueState.waitingForInput = false;
+  dialogueState.askNameAt = null;
+  dialogueState.afterNameLines = null;
+  dialogueState.onComplete = null;
+  dialogueState.context = null;
+}
+
+function startDialogueSequence(lines, options = {}) {
+  const {
+    context = null,
+    askNameAt = null,
+    afterNameLines = null,
+    onComplete = null
+  } = options;
+
+  dialogueState.active = true;
+  dialogueState.queue = Array.isArray(lines) ? [...lines] : [];
+  dialogueState.index = -1;
+  dialogueState.waitingForInput = false;
+  dialogueState.askNameAt = typeof askNameAt === 'number' ? askNameAt : null;
+  dialogueState.afterNameLines = afterNameLines;
+  dialogueState.onComplete = typeof onComplete === 'function' ? onComplete : null;
+  dialogueState.context = context;
+
+  showNextDialogue();
+}
+
 const landingDialogues = [
   "* The lander touches down on the dark side of the moon.",
   "* The silence is absolute.",
   "* Yet... something watches from the craters."
 ];
 
-let monolithDialogueActive = false;
-let askingForName = false;
-let currentMonolithDialogueIndex = 0;
 const monolithDialogues = [
   "... a signal ... faint ... leaves this place ...",
   "... another soul ... what is your designation?"
@@ -671,7 +732,7 @@ function makeTerrain() {
   let firstY = baseHeight + Math.sin(0 * 0.3) * 30 + Math.sin(0 * 0.7) * 20;
   terrain[TERRAIN_POINTS] = { x: TERRAIN_WIDTH, y: firstY };
 
-  for(let i = 0; i < 8; i++) {
+  for(let i = 0; i < 12; i++) {
     const pickupX = Math.random() * TERRAIN_WIDTH;
     const groundY = getGroundY(pickupX);
     fuelPickups.push({ x: pickupX, y: groundY - 10, collected: false });
@@ -685,8 +746,14 @@ function makeTerrain() {
     if(terrain[i]) terrain[i].y = pad.y;
   }
 
-  monolith.x = pad.x + pad.w + 100;
+  monolith.x = pad.x + pad.w + 500;
   monolith.y = getGroundY(monolith.x) - monolith.h;
+
+  lily.x = pad.x - (pad.w + 160);
+  const lilyGround = getGroundY(lily.x);
+  lily.y = lilyGround;
+  lily.picked = false;
+  lilyPromptShown = false;
 }
 
 function showPopup(message) {
@@ -703,33 +770,40 @@ function showUndertaleBox(text, options = {}) {
   const textEl = document.getElementById('undertaleText');
   const inputEl = document.getElementById('undertaleInput');
   const promptEl = document.querySelector('.undertale-prompt');
-  
-  undertaleBoxActive = true;
+  const showInput = Boolean(options.showInput);
+  const promptText = options.promptText || (showInput ? 'Type and press ENTER' : 'Press ENTER');
+
+  dialogueState.active = true;
+  dialogueState.waitingForInput = showInput;
+
   box.classList.add('show');
+  if (showInput) {
+    box.classList.add('asking-name');
+  } else {
+    box.classList.remove('asking-name');
+  }
   box.style.borderColor = '#fff';
   box.style.boxShadow = '0 0 0 4px #000, 0 0 40px rgba(255,255,255,0.5)';
   textEl.textContent = '';
-  
-  if (options.showInput) {
-    askingForName = true;
-    inputEl.style.display = 'inline-block';
+
+  if (showInput) {
     inputEl.value = '';
-    setTimeout(() => inputEl.focus(), 100); // Short delay to ensure it's visible
-    promptEl.style.display = 'block';
+    setTimeout(() => inputEl.focus(), 50);
   } else {
-    askingForName = false;
-    inputEl.style.display = 'none';
-    promptEl.style.display = 'block';
+    inputEl.blur();
   }
-  
+
+  promptEl.style.display = 'block';
+  promptEl.textContent = promptText;
+
   let charIndex = 0;
   if (typewriterInterval) clearInterval(typewriterInterval);
-  
+
   typewriterInterval = setInterval(() => {
     if (charIndex < text.length) {
       textEl.textContent += text[charIndex];
       charIndex++;
-      
+
       if (!isMusicMuted && isAudioUnlocked && charIndex % 2 === 0) {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
@@ -743,6 +817,7 @@ function showUndertaleBox(text, options = {}) {
       }
     } else {
       clearInterval(typewriterInterval);
+      typewriterInterval = null;
     }
   }, 50);
 }
@@ -750,92 +825,115 @@ function showUndertaleBox(text, options = {}) {
 function hideUndertaleBox() {
   const box = document.getElementById('undertaleBox');
   const inputEl = document.getElementById('undertaleInput');
+  const promptEl = document.querySelector('.undertale-prompt');
+
   box.classList.remove('show');
-  undertaleBoxActive = false;
-  askingForName = false;
-  inputEl.style.display = 'none';
+  box.classList.remove('asking-name');
+  inputEl.value = '';
+  promptEl.style.display = 'none';
+
   if (typewriterInterval) {
     clearInterval(typewriterInterval);
     typewriterInterval = null;
   }
+
+  resetDialogueState();
 }
 
 function showNextDialogue() {
-  if (monolithDialogueActive) {
-    if (currentMonolithDialogueIndex < monolithDialogues.length) {
-      const dialogue = monolithDialogues[currentMonolithDialogueIndex];
-      const isNameQuestion = dialogue.includes("designation");
-      showUndertaleBox(dialogue, { showInput: isNameQuestion });
-      currentMonolithDialogueIndex++;
-    } else {
-      hideUndertaleBox();
-      currentMonolithDialogueIndex = 0;
-      monolithDialogueActive = false;
-    }
-  } else {
-    if (currentDialogueIndex < landingDialogues.length) {
-      showUndertaleBox(landingDialogues[currentDialogueIndex]);
-      currentDialogueIndex++;
-    } else {
-      hideUndertaleBox();
-      currentDialogueIndex = 0;
-    }
+  if (!dialogueState.active) return;
+  if (dialogueState.waitingForInput) return;
+
+  const nextIndex = dialogueState.index + 1;
+
+  if (nextIndex >= dialogueState.queue.length) {
+    const completion = dialogueState.onComplete;
+    hideUndertaleBox();
+    if (typeof completion === 'function') completion();
+    return;
   }
+
+  dialogueState.index = nextIndex;
+  const line = dialogueState.queue[dialogueState.index];
+  const shouldAskName = dialogueState.askNameAt === dialogueState.index;
+
+  showUndertaleBox(line, { showInput: shouldAskName });
 }
 
-function askForName() {
-  const textEl = document.getElementById('undertaleText');
+function getNameFollowUpLines(name) {
+  if (!name) return ['... silence ... the signal fades ...'];
+  const trimmed = name.trim();
+  if (!trimmed) return ['... silence ... the signal fades ...'];
+
+  const lower = trimmed.toLowerCase();
+  if (lower === 'raj' || lower === 'rajveer') {
+    return [
+      `... ${trimmed} ... a strange designation ...`,
+      'Hey dev!'
+    ];
+  }
+  if (lower === 'jerusha') {
+    return [
+      `... ${trimmed} ... a strange designation ...`,
+      'Special surprises await.'
+    ];
+  }
+  return [
+    `... ${trimmed} ... a strange designation ...`,
+    `Welcome, ${trimmed}. The journey has just begun.`
+  ];
+}
+
+function handleNameSubmission() {
   const inputEl = document.getElementById('undertaleInput');
   const promptEl = document.querySelector('.undertale-prompt');
-  
-  textEl.textContent = monolithDialogues[currentMonolithDialogueIndex -1];
-  inputEl.style.display = 'inline-block';
-  inputEl.value = '';
-  inputEl.focus();
-  promptEl.style.display = 'block';
-  
-  askingForName = true;
+  const rawName = inputEl.value.trim();
+
+  astronaut.name = rawName || null;
+  astronautNameKnown = Boolean(astronaut.name);
+  inputEl.blur();
+  promptEl.textContent = 'Press ENTER';
+
+  let followUpLines;
+  if (typeof dialogueState.afterNameLines === 'function') {
+    followUpLines = dialogueState.afterNameLines(astronaut.name);
+  } else if (Array.isArray(dialogueState.afterNameLines) && dialogueState.afterNameLines.length > 0) {
+    followUpLines = dialogueState.afterNameLines.map(line => {
+      if (typeof line === 'function') return line(astronaut.name);
+      return line;
+    });
+  } else {
+    followUpLines = getNameFollowUpLines(astronaut.name);
+  }
+
+  dialogueState.waitingForInput = false;
+  dialogueState.askNameAt = null;
+  dialogueState.afterNameLines = null;
+  dialogueState.queue = Array.isArray(followUpLines) ? [...followUpLines] : [];
+  dialogueState.index = -1;
+
+  showNextDialogue();
 }
 
 const keys = {};
 window.addEventListener('keydown', e => {
   const key = e.key.toLowerCase();
   
-  // If the dialogue box is active, we have a special input mode.
-  if (undertaleBoxActive) {
-    // When we are asking for a name, we want to allow typing.
-    if (askingForName) {
+  if (dialogueState.active) {
+    if (dialogueState.waitingForInput) {
       if (key === 'enter') {
-        // On Enter, submit the name.
-        const inputEl = document.getElementById('undertaleInput');
-        astronaut.name = inputEl.value.trim();
-        askingForName = false;
-        inputEl.style.display = 'none';
-        
-        if (astronaut.name) {
-          showUndertaleBox(`... ${astronaut.name} ... a strange designation ...`);
-          setTimeout(() => {
-            showUndertaleBox(`Welcome, ${astronaut.name}. The journey has just begun.`);
-            setTimeout(hideUndertaleBox, 3000);
-          }, 2000);
-        } else {
-          showUndertaleBox("... silence ... the signal fades ...");
-          setTimeout(hideUndertaleBox, 2000);
-        }
-        e.preventDefault(); // Prevent default Enter behavior.
+        e.preventDefault();
+        handleNameSubmission();
       }
-      // For any other key, we do NOT preventDefault, allowing the user to type.
-      // We also don't process game controls.
-      return; 
+      return;
     }
-    
-    // If just viewing dialogue (not typing name), Enter advances it.
+
     if (key === 'enter') {
+      e.preventDefault();
       showNextDialogue();
+    } else {
+      e.preventDefault();
     }
-    
-    // Prevent all other keys from doing anything during dialogue.
-    e.preventDefault();
     return;
   }
 
@@ -906,6 +1004,7 @@ function startGame() {
   ship.angle = 0;
   ship.fuel = 100;
   ship.thrusting = false;
+  ship.throttle = 0;
   ship.legExtension = 0;
   
   camera.x = ship.x - W/2;
@@ -920,6 +1019,12 @@ function startGame() {
       splashCtx.clearRect(0, 0, splashCanvas.width, splashCanvas.height);
     }
     splashStars = [];
+    monolithDialogueSeen = false;
+    astronaut.name = null;
+  astronautNameKnown = false;
+  stuntTracker.lastAngle = 0;
+  stuntTracker.accum = 0;
+  stuntTracker.cooldown = 0;
 }
 
 function reset() {
@@ -930,6 +1035,7 @@ function reset() {
   ship.angle = 0;
   ship.fuel = 100;
   ship.legExtension = 0;
+  ship.throttle = 0;
   ship.firstLegTouchTime = null;
   ship.thrusting = false;
   
@@ -941,6 +1047,14 @@ function reset() {
   document.getElementById('msg').style.display = 'none';
   document.getElementById('controls').innerHTML = 'W/↑ THRUST | A/D ROTATE | R RESTART | ESC MENU';
   hideUndertaleBox();
+  monolithDialogueSeen = false;
+  astronautNameKnown = Boolean(astronaut.name);
+  lily.y = getGroundY(lily.x);
+  lily.picked = false;
+  lilyPromptShown = false;
+  stuntTracker.lastAngle = 0;
+  stuntTracker.accum = 0;
+  stuntTracker.cooldown = 0;
   gameState = 'playing';
 }
 
@@ -980,9 +1094,8 @@ function endGame(msg, success) {
     
     if (!firstLandingDone) {
       firstLandingDone = true;
-      currentDialogueIndex = 0;
       setTimeout(() => {
-        showNextDialogue();
+        startDialogueSequence(landingDialogues, { context: 'landing' });
       }, 1000);
     }
   } else {
@@ -1008,31 +1121,72 @@ function updateShip() {
     if (keys['arrowleft'] || keys['a']) ship.angle -= 0.05;
     if (keys['arrowright'] || keys['d']) ship.angle += 0.05;
 
+    // Normalize angle to [-PI, PI] to measure deltas cleanly
+    function normAngle(a){
+      while (a > Math.PI) a -= Math.PI * 2;
+      while (a <= -Math.PI) a += Math.PI * 2;
+      return a;
+    }
+    const currentAngle = normAngle(ship.angle);
+    const prevAngle = stuntTracker.lastAngle;
+    let delta = currentAngle - prevAngle;
+    // Wrap delta to shortest path
+    if (delta > Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    stuntTracker.accum += delta;
+    stuntTracker.lastAngle = currentAngle;
+
+    // Cooldown prevents spam if spinning continuously
+    if (stuntTracker.cooldown > 0) stuntTracker.cooldown--;
+    // Check for full rotation (2π). Accumulate multiples without resetting.
+    const twoPi = Math.PI * 2;
+    if (Math.abs(stuntTracker.accum) >= twoPi && stuntTracker.cooldown === 0) {
+      const flips = Math.floor(Math.abs(stuntTracker.accum) / twoPi);
+      stuntTracker.cooldown = 60; // ~1s at 60fps
+      const label = flips === 1 ? 'FLIP!' : `${flips}x FLIP!`;
+      showPopup(label);
+      // Don't reset accum here; let it continue accumulating for back-to-back
+    }
+
     ship.thrusting = (keys['arrowup'] || keys['w']) && ship.fuel > 0;
 
-    if (ship.thrusting) {
-        if (!godModeEnabled) {
-            ship.fuel -= 0.5;
-            if (ship.fuel < 0) ship.fuel = 0;
-        }
-        const thrustPower = 0.2;
-        ship.vx += Math.sin(ship.angle) * thrustPower;
-        ship.vy -= Math.cos(ship.angle) * thrustPower;
-        
-        if (sounds.thrust && isAudioUnlocked) {
-            sounds.thrust.gain.gain.value = !isMusicMuted ? 0.2 : 0;
-            sounds.thrust.filter.frequency.value = 200 + Math.random() * 50;
-        }
-        const flameX = ship.x - Math.sin(ship.angle) * 20;
-        const flameY = ship.y + Math.cos(ship.angle) * 20;
-        for (let i = 0; i < 5; i++) {
-            const particleAngle = ship.angle + (Math.random() - 0.5) * 0.5;
-            const speed = 2 + Math.random() * 3;
-            createParticle(flameX, flameY, ship.vx - Math.sin(particleAngle) * speed, ship.vy + Math.cos(particleAngle) * speed, 'rgb(255, 150, 0)');
-        }
-    } else if (sounds.thrust) {
-        sounds.thrust.gain.gain.value = 0;
+    // Smooth throttle ramp only during takeoff (near ground) to show rocket weight
+    const takeoffGroundY = getGroundY(ship.x);
+    const isTakeoff = ship.y + 30 >= takeoffGroundY - 5; // Within 5 units of ground
+    if (isTakeoff) {
+      if (ship.thrusting) {
+        ship.throttle += THRUST_RAMP_UP;
+      } else {
+        ship.throttle -= THRUST_RAMP_DOWN;
+      }
+      ship.throttle = Math.max(0, Math.min(1, ship.throttle));
+    } else {
+      // Instant throttle in flight for responsive control
+      ship.throttle = ship.thrusting ? 1 : 0;
+    }  if (ship.throttle > 0) {
+    if (ship.thrusting && !godModeEnabled) {
+      ship.fuel -= 0.5 * ship.throttle; // fuel cost proportional to throttle
+      if (ship.fuel < 0) ship.fuel = 0;
     }
+    const thrustPower = MAX_THRUST_POWER * ship.throttle;
+    ship.vx += Math.sin(ship.angle) * thrustPower;
+    ship.vy -= Math.cos(ship.angle) * thrustPower;
+
+    if (sounds.thrust && isAudioUnlocked) {
+      sounds.thrust.gain.gain.value = !isMusicMuted ? 0.2 * ship.throttle : 0;
+      sounds.thrust.filter.frequency.value = 180 + 80 * ship.throttle + Math.random() * 20;
+    }
+    const flameX = ship.x - Math.sin(ship.angle) * 20;
+    const flameY = ship.y + Math.cos(ship.angle) * 20;
+    const particleCount = 2 + Math.floor(4 * ship.throttle);
+    for (let i = 0; i < particleCount; i++) {
+      const particleAngle = ship.angle + (Math.random() - 0.5) * 0.4;
+      const speed = 1 + ship.throttle * 4 + Math.random() * 1.5;
+      createParticle(flameX, flameY, ship.vx - Math.sin(particleAngle) * speed, ship.vy + Math.cos(particleAngle) * speed, 'rgb(255, 150, 0)');
+    }
+  } else if (sounds.thrust) {
+    sounds.thrust.gain.gain.value = 0;
+  }
 
     ship.vy += SHIP_GRAVITY;
     
@@ -1216,10 +1370,47 @@ function update(dt) {
         controlsEl.innerHTML = 'A/D or ←/→ MOVE | SPACE JUMP | R RESTART | ESC MENU';
       }
       const monolithDist = Math.hypot(astronaut.x - (monolith.x + monolith.w/2), astronaut.y - (monolith.y + monolith.h/2));
-      if (monolithDist < 50 && !undertaleBoxActive && !monolithDialogueActive) {
-        monolithDialogueActive = true;
-        currentMonolithDialogueIndex = 0;
-        showNextDialogue();
+      if (monolithDist < 50 && !dialogueState.active && !monolithDialogueSeen) {
+        monolithDialogueSeen = true;
+        if (astronautNameKnown) {
+          const personalizedLines = [
+            monolithDialogues[0],
+            ...getNameFollowUpLines(astronaut.name)
+          ];
+          startDialogueSequence(personalizedLines, { context: 'monolith' });
+        } else {
+          startDialogueSequence(monolithDialogues, {
+            context: 'monolith',
+            askNameAt: 1,
+            afterNameLines: name => getNameFollowUpLines(name)
+          });
+        }
+      }
+      if (monolithDist > 70 && !dialogueState.active) {
+        monolithDialogueSeen = false;
+      }
+
+      if (!lily.picked) {
+        const lilyCenterY = lily.y - 10;
+        const lilyDist = Math.hypot(astronaut.x - lily.x, (astronaut.y + astronaut.h / 2) - lilyCenterY);
+        if (lilyDist < 40) {
+          if (!lilyPromptShown) {
+            showPopup("Press 'E' to pick the lily");
+            lilyPromptShown = true;
+          }
+          if (keys['e']) {
+            const name = astronaut.name ? astronaut.name.trim().toLowerCase() : '';
+            if (name === 'jerusha') {
+              lily.picked = true;
+              showPopup('The lily warms to your touch. You keep it safe.');
+            } else {
+              showPopup('Only the chosen one can take this bloom.');
+            }
+            delete keys['e'];
+          }
+        } else if (lilyDist > 60) {
+          lilyPromptShown = false;
+        }
       }
       break;
   }
@@ -1317,6 +1508,24 @@ function drawWorld() {
   ctx.fillRect(pad.x, pad.y - 2, 10, 2);
   ctx.fillRect(pad.x + pad.w - 10, pad.y - 2, 10, 2);
   ctx.fillRect(pad.x + pad.w/2 - 5, pad.y - 2, 10, 2);
+
+  if (!lily.picked) {
+    const stemHeight = 16;
+    const stemWidth = 2;
+    const lilyBaseX = lily.x;
+    const lilyBaseY = lily.y;
+    ctx.fillStyle = '#1ac36a';
+    ctx.fillRect(lilyBaseX - stemWidth / 2, lilyBaseY - stemHeight, stemWidth, stemHeight);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(lilyBaseX, lilyBaseY - stemHeight, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f2f2f2';
+    ctx.beginPath();
+    ctx.arc(lilyBaseX - 3, lilyBaseY - stemHeight + 1, 3, 0, Math.PI * 2);
+    ctx.arc(lilyBaseX + 3, lilyBaseY - stemHeight + 1, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
   
   if(Math.sin(Date.now() * 0.005) > 0) {
     ctx.fillStyle = '#0f0';
