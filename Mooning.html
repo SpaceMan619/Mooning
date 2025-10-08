@@ -6,6 +6,7 @@
   <title>Mooning - Vibe Coded V4</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
     
     * { margin: 0; padding: 0; }
     body { 
@@ -15,7 +16,6 @@
     }
     canvas { 
         display: block; 
-        /* --- CRISP PIXEL ART RENDERING --- */
         image-rendering: -moz-crisp-edges;
         image-rendering: -webkit-crisp-edges;
         image-rendering: pixelated;
@@ -28,7 +28,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(180deg, #000 0%, #0a0a2e 50%, #000 100%);
+      background: #000;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -37,6 +37,15 @@
       transition: opacity 1s ease-out;
       overflow: hidden;
     }
+
+    #splashCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
     
     .title-screen.hidden {
       opacity: 0;
@@ -44,75 +53,59 @@
     }
     
     .title {
-      font-size: 80px;
+      font-size: 72px;
       font-weight: 900;
-      background: linear-gradient(45deg, #ff00ff, #00ffff, #ff00ff);
-      background-size: 200% 200%;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 30px rgba(255,0,255,0.5);
-      animation: gradient 3s ease infinite, glow 2s ease-in-out infinite;
-      margin-bottom: 20px;
-      letter-spacing: 10px;
+      font-family: 'Press Start 2P', monospace;
+      color: #fff;
+      text-shadow: 4px 4px 0px #666;
+      margin-bottom: 40px;
+      letter-spacing: 8px;
       z-index: 2;
     }
     
     .subtitle {
-      color: #00ffff;
-      font-size: 20px;
+      color: #aaa;
+      font-size: 14px;
+      font-family: 'Press Start 2P', monospace;
       margin-bottom: 10px;
-      text-shadow: 0 0 10px rgba(0, 255, 255, 1), 0 0 20px rgba(0, 255, 255, 0.7);
       z-index: 2;
     }
 
     .credits, .start-btn { z-index: 2; }
     
     .credits {
-      color: #ff00ff;
-      font-size: 16px;
-      margin-bottom: 50px;
-      text-shadow: 0 0 10px rgba(255,0,255,0.5);
+      color: #888;
+      font-size: 12px;
+      font-family: 'Press Start 2P', monospace;
+      margin-bottom: 60px;
+      z-index: 2;
     }
     
     .start-btn {
-      padding: 20px 40px;
-      font-size: 24px;
-      background: transparent;
-      color: #00ffff;
-      border: 2px solid #00ffff;
+      padding: 15px 30px;
+      font-size: 16px;
+      background: #000;
+      color: #fff;
+      border: 3px solid #fff;
       cursor: pointer;
-      font-family: 'Orbitron', monospace;
+      font-family: 'Press Start 2P', monospace;
       position: relative;
-      overflow: hidden;
-      transition: all 0.3s;
+      transition: all 0.1s;
       text-transform: uppercase;
-      letter-spacing: 3px;
+      letter-spacing: 2px;
+      box-shadow: 4px 4px 0px #666;
     }
     
     .start-btn:hover {
+      background: #fff;
       color: #000;
-      background: #00ffff;
-      box-shadow: 0 0 30px rgba(0,255,255,0.8);
-      transform: scale(1.05);
+      transform: translate(2px, 2px);
+      box-shadow: 2px 2px 0px #666;
     }
     
-    .start-btn:before {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.5);
-      transform: translate(-50%, -50%);
-      transition: width 0.6s, height 0.6s;
-    }
-    
-    .start-btn:hover:before {
-      width: 300px;
-      height: 300px;
+    .start-btn:active {
+      transform: translate(4px, 4px);
+      box-shadow: 0px 0px 0px #666;
     }
     
     @keyframes gradient {
@@ -165,13 +158,27 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      color: #0ff;
-      font-family: 'Orbitron', monospace;
-      font-size: 28px;
+      font-size: 24px;
       text-align: center;
-      text-shadow: 0 0 20px rgba(0,255,255,0.8);
       display: none;
       z-index: 10;
+      padding: 30px;
+      background: rgba(0, 0, 0, 0.95);
+      border: 3px solid #0f0;
+      border-radius: 4px;
+      box-shadow: 
+        0 0 20px rgba(0, 255, 0, 0.3),
+        inset 0 0 20px rgba(0, 255, 0, 0.2);
+      animation: msgPulse 2s infinite;
+      min-width: 400px;
+      max-width: 80%;
+      backdrop-filter: blur(5px);
+    }
+    
+    @keyframes msgPulse {
+      0% { border-color: #0f0; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3), inset 0 0 20px rgba(0, 255, 0, 0.2); }
+      50% { border-color: #0a0; box-shadow: 0 0 30px rgba(0, 255, 0, 0.4), inset 0 0 30px rgba(0, 255, 0, 0.3); }
+      100% { border-color: #0f0; box-shadow: 0 0 20px rgba(0, 255, 0, 0.3), inset 0 0 20px rgba(0, 255, 0, 0.2); }
     }
 
     .popup-msg {
@@ -212,15 +219,98 @@
       transition: opacity 0.3s;
     }
     .sound-toggle:hover { opacity: 1; }
+
+    /* Radar CSS removed */
+
+    .undertale-box {
+      position: fixed;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      max-width: 600px;
+      background: #000;
+      border: 4px solid #fff;
+      padding: 20px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      color: #fff;
+      line-height: 1.8;
+      z-index: 2000;
+      display: none;
+  box-shadow: 0 0 0 4px #000, 0 0 40px rgba(255, 255, 255, 0.3);
+  transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .undertale-box.show {
+      display: block;
+      animation: undertale-appear 0.3s ease-out;
+    }
+
+    @keyframes undertale-appear {
+      from {
+        transform: translateX(-50%) scale(0.9);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(-50%) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .undertale-text {
+      display: inline;
+    }
+
+    .undertale-prompt {
+      position: absolute;
+      bottom: 10px;
+      right: 20px;
+      font-size: 10px;
+      color: #888;
+      animation: blink 1s infinite;
+    }
+
+    .msg.success {
+      top: 20%;
+      bottom: auto;
+      background: rgba(0, 20, 0, 0.8);
+      border: 2px solid #0f0;
+      backdrop-filter: none;
+      animation: none;
+      min-width: 300px;
+      padding: 20px;
+    }
+
+    .msg.crash {
+      /* This will inherit the default .msg styles for the crash screen */
+    }
+
+    .undertale-input {
+      display: none;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid #fff;
+      color: #fff;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      width: 50%;
+      margin-left: 10px;
+      padding: 4px;
+    }
+    .undertale-input:focus {
+      outline: none;
+      border-bottom-color: #0f0;
+    }
   </style>
 </head>
 <body>
   <div class="title-screen" id="titleScreen">
-    <div class="retro-grid"></div>
+    <canvas id="splashCanvas"></canvas>
     <div class="title">MOONING</div>
-    <div class="subtitle">VIBE CODED</div>
-    <div class="credits">by Rajveer</div>
-    <button class="start-btn" onclick="startGame()">START MISSION</button>
+    <div class="subtitle">A lunar landing experience</div>
+    <div class="credits">Created by Rajveer</div>
+    <button class="start-btn" onclick="startGame()">START</button>
     <div class="sound-toggle" id="soundToggle">🔇</div>
   </div>
   
@@ -242,25 +332,120 @@
     W/↑ THRUST | A/D ROTATE | R RESTART | ESC MENU
   </div>
 
+  <div class="undertale-box" id="undertaleBox">
+    <div class="undertale-text" id="undertaleText"></div>
+    <input type="text" class="undertale-input" id="undertaleInput" maxlength="20" />
+    <div class="undertale-prompt">Press ENTER</div>
+  </div>
+
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let W = canvas.width = window.innerWidth;
 let H = canvas.height = window.innerHeight;
 
-// --- NEW & MODIFIED GLOBALS ---
-let moonPatternFill;
+let gameState = 'title';
+const SHIP_GRAVITY = 0.02;
+const ASTRO_GRAVITY = 0.05;
+const JUMP_FORCE = -2.5;
+const MOVE_SPEED = 1.5;
+
+let ship = { x: W/2, y: 100, vx: 0, vy: 0, angle: 0, fuel: 100, thrusting: false, legExtension: 0, firstLegTouchTime: null };
+let astronaut = { x: 0, y: 0, vx: 0, vy: 0, w: 8, h: 16, onGround: false, visible: false, name: null };
+let camera = { x: 0, y: 0 };
+let terrain = [];
+let fuelPickups = [];
+let monolith = { x: 0, y: 0, w: 20, h: 80 };
+let pad = { x: 0, y: 0, w: 120 };
+const TERRAIN_WIDTH = W * 5;
+const TERRAIN_POINTS = 300;
+
+// Initialize core game state
 let godModeEnabled = false;
 const keySequence = [];
 const GOD_MODE_SEQUENCE = 'god';
+let undertaleBoxActive = false;
+let firstLandingDone = false;
+let typewriterInterval = null;
+let currentDialogueIndex = 0;
+const landingDialogues = [
+  "* The lander touches down on the dark side of the moon.",
+  "* The silence is absolute.",
+  "* Yet... something watches from the craters."
+];
 
-// Audio Context
+let monolithDialogueActive = false;
+let askingForName = false;
+let currentMonolithDialogueIndex = 0;
+const monolithDialogues = [
+  "... a signal ... faint ... leaves this place ...",
+  "... another soul ... what is your designation?"
+];
+
+
+let splashStars = [];
+let splashMoon = { y: -200, vy: 0.1 };
+
+function setupSplashScreen() {
+  const splashCanvas = document.getElementById('splashCanvas');
+  const splashCtx = splashCanvas.getContext('2d');
+  
+  // Set initial canvas size
+  splashCanvas.width = window.innerWidth;
+  splashCanvas.height = window.innerHeight;
+
+  // Create stars if they don't exist
+  if (splashStars.length === 0) {
+    for (let i = 0; i < 100; i++) {
+      splashStars.push({
+        x: Math.random() * splashCanvas.width,
+        y: Math.random() * splashCanvas.height,
+        size: Math.random() * 2 + 1,
+        speed: Math.random() * 0.5 + 0.1
+      });
+    }
+  }
+
+  // Handle resize
+  window.addEventListener('resize', () => {
+    if (gameState === 'title') {
+      splashCanvas.width = window.innerWidth;
+      splashCanvas.height = window.innerHeight;
+    }
+  });
+
+  function drawSplashScreen() {
+    if (gameState !== 'title') return;
+
+    splashCtx.clearRect(0, 0, splashCanvas.width, splashCanvas.height);
+
+    // Draw stars
+    splashCtx.fillStyle = 'white';
+    for (const star of splashStars) {
+      star.y += star.speed;
+      if (star.y > splashCanvas.height) {
+        star.y = 0;
+        star.x = Math.random() * splashCanvas.width;
+      }
+      const pulse = Math.sin(Date.now() * 0.003 + star.x) * 0.2 + 0.8;
+      splashCtx.globalAlpha = pulse;
+      splashCtx.fillRect(star.x, star.y, star.size, star.size);
+    }
+    splashCtx.globalAlpha = 1;
+
+    requestAnimationFrame(drawSplashScreen);
+  }
+
+  // Start the animation loop
+  drawSplashScreen();
+}
+
+
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 const audioCtx = new AudioContext();
 let isAudioUnlocked = false;
-let isMusicMuted = true; // --- CHANGE: Start muted by default
+let isMusicMuted = true;
 
-// Sound generators
 const sounds = {
   thrust: null,
   ambience: null,
@@ -269,10 +454,9 @@ const sounds = {
   land: null
 };
 
-// Particle system
 const particles = [];
 
-function createParticle(x, y, vx, vy, color, life = 60) {
+function createParticle(x, y, vx, vy, color, life = 30) {
   particles.push({ x, y, vx, vy, color, life, maxLife: life });
 }
 
@@ -282,7 +466,7 @@ function updateParticles() {
     p.x += p.vx;
     p.y += p.vy;
     p.life--;
-    p.vy += 0.1;
+    p.vy += 0.05;
     if (p.life <= 0) particles.splice(i, 1);
   }
 }
@@ -292,9 +476,13 @@ function drawParticles() {
     const alpha = p.life / p.maxLife;
     ctx.fillStyle = p.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 2 + alpha * 3, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, alpha * 1.5, 0, Math.PI * 2);
     ctx.fill();
   });
+}
+
+function drawRadar() {
+  // Radar removed for stability
 }
 
 function unlockAudio() {
@@ -303,7 +491,6 @@ function unlockAudio() {
             audioCtx.resume();
         }
         isAudioUnlocked = true;
-        // Don't start music automatically if muted
         if (!isMusicMuted) {
             startTitleMusic();
         }
@@ -429,49 +616,43 @@ function playEffect(type) {
   osc.stop(audioCtx.currentTime + 1.5);
 }
 
-// Game State and Entities
-let gameState = 'title'; // title, playing, landed, crashed, exploring
-const SHIP_GRAVITY = 0.02;
-const ASTRO_GRAVITY = 0.05;
-const JUMP_FORCE = -2.5;
-const MOVE_SPEED = 1.5;
-
-let ship = { x: W/2, y: 100, vx: 0, vy: 0, angle: 0, fuel: 100, thrusting: false, legExtension: 0 };
-let astronaut = { x: 0, y: 0, vx: 0, vy: 0, w: 8, h: 16, onGround: false, visible: false };
-let camera = { x: 0 };
-let terrain = [];
-let fuelPickups = [];
-let pad = { x: 0, y: 0, w: 120 };
-const TERRAIN_WIDTH = W * 5;
-const TERRAIN_POINTS = 300;
-
 let stars = [];
 for(let i = 0; i < 200; i++) {
   stars.push({ x: Math.random() * W, y: Math.random() * H, size: Math.random() * 2, speed: 0.1 + Math.random() * 0.3 });
 }
 
-// --- MORE PIXELATED PATTERN FUNCTION ---
 function createMoonPattern() {
     const patternCanvas = document.createElement('canvas');
     const pCtx = patternCanvas.getContext('2d');
-    const size = 16; // Smaller canvas for larger perceived pixels
-    const pixelSize = 2; // Draw 2x2 blocks for a chunkier feel
+    const size = 64;
+    const pixelSize = 2;
     patternCanvas.width = size;
     patternCanvas.height = size;
 
-    const colors = ['#6a6a73', '#878792', '#505059'];
-    pCtx.fillStyle = colors[0]; // Base color
+    pCtx.fillStyle = '#5a5a63';
     pCtx.fillRect(0, 0, size, size);
 
-    // Draw on a grid for a more intentional pattern
-    for (let x = 0; x < size; x += pixelSize * 2) {
-        for (let y = 0; y < size; y += pixelSize * 2) {
-            if (Math.random() > 0.5) {
-                pCtx.fillStyle = colors[Math.floor(Math.random() * 2) + 1];
-                pCtx.fillRect(x + (Math.random() - 0.5) * pixelSize, y + (Math.random() - 0.5) * pixelSize, pixelSize, pixelSize);
+    const colors = ['#4a4a53', '#6a6a73', '#7a7a83', '#505059'];
+    
+    for (let x = 0; x < size; x += pixelSize) {
+        for (let y = 0; y < size; y += pixelSize) {
+            const rand = Math.random();
+            if (rand > 0.6) {
+                const colorIndex = Math.floor(Math.random() * colors.length);
+                pCtx.fillStyle = colors[colorIndex];
+                pCtx.fillRect(x, y, pixelSize, pixelSize);
             }
         }
     }
+    
+    for (let i = 0; i < 8; i++) {
+        const x = Math.floor(Math.random() * (size / pixelSize)) * pixelSize;
+        const y = Math.floor(Math.random() * (size / pixelSize)) * pixelSize;
+        const craterSize = (1 + Math.floor(Math.random() * 2)) * pixelSize;
+        pCtx.fillStyle = '#3a3a43';
+        pCtx.fillRect(x, y, craterSize, craterSize);
+    }
+    
     return patternCanvas;
 }
 
@@ -479,16 +660,14 @@ function makeTerrain() {
   terrain = [];
   fuelPickups = [];
   
-  let baseHeight = H * 0.7;
+  let baseHeight = H * 0.5;
   
-  // Use a combination of sines for smooth, rolling hills
   for(let i = 0; i <= TERRAIN_POINTS; i++) {
     let x = (TERRAIN_WIDTH / TERRAIN_POINTS) * i;
     let y = baseHeight + Math.sin(i * 0.3) * 30 + Math.sin(i * 0.7) * 20;
     terrain.push({x, y});
   }
   
-  // --- FIX SEAM: Ensure the last point connects perfectly to the first for seamless wrapping ---
   let firstY = baseHeight + Math.sin(0 * 0.3) * 30 + Math.sin(0 * 0.7) * 20;
   terrain[TERRAIN_POINTS] = { x: TERRAIN_WIDTH, y: firstY };
 
@@ -505,9 +684,11 @@ function makeTerrain() {
   for(let i = padIndex - 2; i <= padIndex + 2; i++) {
     if(terrain[i]) terrain[i].y = pad.y;
   }
+
+  monolith.x = pad.x + pad.w + 100;
+  monolith.y = getGroundY(monolith.x) - monolith.h;
 }
 
-// --- NEW FUNCTION for popups ---
 function showPopup(message) {
     const popup = document.getElementById('popupMsg');
     popup.textContent = message;
@@ -517,28 +698,175 @@ function showPopup(message) {
     }, 2000);
 }
 
+function showUndertaleBox(text, options = {}) {
+  const box = document.getElementById('undertaleBox');
+  const textEl = document.getElementById('undertaleText');
+  const inputEl = document.getElementById('undertaleInput');
+  const promptEl = document.querySelector('.undertale-prompt');
+  
+  undertaleBoxActive = true;
+  box.classList.add('show');
+  box.style.borderColor = '#fff';
+  box.style.boxShadow = '0 0 0 4px #000, 0 0 40px rgba(255,255,255,0.5)';
+  textEl.textContent = '';
+  
+  if (options.showInput) {
+    askingForName = true;
+    inputEl.style.display = 'inline-block';
+    inputEl.value = '';
+    setTimeout(() => inputEl.focus(), 100); // Short delay to ensure it's visible
+    promptEl.style.display = 'block';
+  } else {
+    askingForName = false;
+    inputEl.style.display = 'none';
+    promptEl.style.display = 'block';
+  }
+  
+  let charIndex = 0;
+  if (typewriterInterval) clearInterval(typewriterInterval);
+  
+  typewriterInterval = setInterval(() => {
+    if (charIndex < text.length) {
+      textEl.textContent += text[charIndex];
+      charIndex++;
+      
+      if (!isMusicMuted && isAudioUnlocked && charIndex % 2 === 0) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = 200;
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.05);
+      }
+    } else {
+      clearInterval(typewriterInterval);
+    }
+  }, 50);
+}
+
+function hideUndertaleBox() {
+  const box = document.getElementById('undertaleBox');
+  const inputEl = document.getElementById('undertaleInput');
+  box.classList.remove('show');
+  undertaleBoxActive = false;
+  askingForName = false;
+  inputEl.style.display = 'none';
+  if (typewriterInterval) {
+    clearInterval(typewriterInterval);
+    typewriterInterval = null;
+  }
+}
+
+function showNextDialogue() {
+  if (monolithDialogueActive) {
+    if (currentMonolithDialogueIndex < monolithDialogues.length) {
+      const dialogue = monolithDialogues[currentMonolithDialogueIndex];
+      const isNameQuestion = dialogue.includes("designation");
+      showUndertaleBox(dialogue, { showInput: isNameQuestion });
+      currentMonolithDialogueIndex++;
+    } else {
+      hideUndertaleBox();
+      currentMonolithDialogueIndex = 0;
+      monolithDialogueActive = false;
+    }
+  } else {
+    if (currentDialogueIndex < landingDialogues.length) {
+      showUndertaleBox(landingDialogues[currentDialogueIndex]);
+      currentDialogueIndex++;
+    } else {
+      hideUndertaleBox();
+      currentDialogueIndex = 0;
+    }
+  }
+}
+
+function askForName() {
+  const textEl = document.getElementById('undertaleText');
+  const inputEl = document.getElementById('undertaleInput');
+  const promptEl = document.querySelector('.undertale-prompt');
+  
+  textEl.textContent = monolithDialogues[currentMonolithDialogueIndex -1];
+  inputEl.style.display = 'inline-block';
+  inputEl.value = '';
+  inputEl.focus();
+  promptEl.style.display = 'block';
+  
+  askingForName = true;
+}
+
 const keys = {};
 window.addEventListener('keydown', e => {
   const key = e.key.toLowerCase();
+  
+  // If the dialogue box is active, we have a special input mode.
+  if (undertaleBoxActive) {
+    // When we are asking for a name, we want to allow typing.
+    if (askingForName) {
+      if (key === 'enter') {
+        // On Enter, submit the name.
+        const inputEl = document.getElementById('undertaleInput');
+        astronaut.name = inputEl.value.trim();
+        askingForName = false;
+        inputEl.style.display = 'none';
+        
+        if (astronaut.name) {
+          showUndertaleBox(`... ${astronaut.name} ... a strange designation ...`);
+          setTimeout(() => {
+            showUndertaleBox(`Welcome, ${astronaut.name}. The journey has just begun.`);
+            setTimeout(hideUndertaleBox, 3000);
+          }, 2000);
+        } else {
+          showUndertaleBox("... silence ... the signal fades ...");
+          setTimeout(hideUndertaleBox, 2000);
+        }
+        e.preventDefault(); // Prevent default Enter behavior.
+      }
+      // For any other key, we do NOT preventDefault, allowing the user to type.
+      // We also don't process game controls.
+      return; 
+    }
+    
+    // If just viewing dialogue (not typing name), Enter advances it.
+    if (key === 'enter') {
+      showNextDialogue();
+    }
+    
+    // Prevent all other keys from doing anything during dialogue.
+    e.preventDefault();
+    return;
+  }
+
+  // --- Regular game controls (only run if dialogue box is NOT active) ---
   keys[key] = true;
   
-  if (key.length === 1) { // Only track single character keys for cheat code
+  if (key.length === 1) {
     keySequence.push(key);
     if (keySequence.length > GOD_MODE_SEQUENCE.length) {
         keySequence.shift();
     }
     if (keySequence.join('') === GOD_MODE_SEQUENCE) {
-        godModeEnabled = true;
-        showPopup('God Mode Enabled');
+        godModeEnabled = !godModeEnabled;
+        if (godModeEnabled) ship.fuel = 100;
+        showPopup(godModeEnabled ? 'God Mode Enabled' : 'God Mode Disabled');
     }
   }
 
   if(key === 'r' && gameState !== 'title') reset();
   if(key === 'escape' && gameState !== 'title') {
+    // Reset to title screen
     document.getElementById('titleScreen').classList.remove('hidden');
+    gameState = 'title';
+    
+    // Clear and reinitialize splash screen stars
+    splashStars = [];
+    setupSplashScreen();
+    
+    // Handle music
     stopTitleMusic();
     startTitleMusic();
-    gameState = 'title';
   }
 });
 window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
@@ -551,7 +879,7 @@ document.getElementById('soundToggle').addEventListener('click', () => {
     stopTitleMusic();
     if(sounds.ambience) sounds.ambience.gain.gain.value = 0;
   } else {
-    unlockAudio(); // Important for first click
+    unlockAudio();
     if (gameState === 'title') startTitleMusic();
     if(sounds.ambience) sounds.ambience.gain.gain.value = 0.03;
   }
@@ -567,9 +895,31 @@ function startGame() {
   stopTitleMusic();
   if (!sounds.thrust) sounds.thrust = createThrustSound();
   if (!sounds.ambience) sounds.ambience = createAmbience();
+  
   document.getElementById('titleScreen').classList.add('hidden');
+  
   gameState = 'playing';
-  reset();
+  ship.x = W/2;
+  ship.y = 100;
+  ship.vx = 0;
+  ship.vy = 0;
+  ship.angle = 0;
+  ship.fuel = 100;
+  ship.thrusting = false;
+  ship.legExtension = 0;
+  
+  camera.x = ship.x - W/2;
+  camera.y = 0;
+  
+  makeTerrain();
+
+    // Clear splash canvas and stars
+    const splashCanvas = document.getElementById('splashCanvas');
+    if (splashCanvas) {
+      const splashCtx = splashCanvas.getContext('2d');
+      splashCtx.clearRect(0, 0, splashCanvas.width, splashCanvas.height);
+    }
+    splashStars = [];
 }
 
 function reset() {
@@ -580,12 +930,17 @@ function reset() {
   ship.angle = 0;
   ship.fuel = 100;
   ship.legExtension = 0;
+  ship.firstLegTouchTime = null;
+  ship.thrusting = false;
+  
   astronaut.visible = false;
   camera.x = ship.x - W / 2;
+  camera.y = 0;
   fuelPickups.forEach(p => p.collected = false);
   document.getElementById('fuelPacks').textContent = '0';
   document.getElementById('msg').style.display = 'none';
   document.getElementById('controls').innerHTML = 'W/↑ THRUST | A/D ROTATE | R RESTART | ESC MENU';
+  hideUndertaleBox();
   gameState = 'playing';
 }
 
@@ -602,79 +957,147 @@ function getGroundY(xPos) {
 
 function endGame(msg, success) {
   gameState = success ? 'landed' : 'crashed';
-  document.getElementById('msg').textContent = success ? msg + " | 'O' to Explore | Thrust to Take-Off" : msg + ' [R to restart]';
-  document.getElementById('msg').style.display = 'block';
-  document.getElementById('msg').style.color = success ? '#0f0' : '#f00';
+  
+  const msgEl = document.getElementById('msg');
+  
+  // Reset styles first
+  msgEl.className = 'msg'; 
+
   if (success) {
-    ship.y = getGroundY(ship.x) - 15; // Set y precisely on the ground
     ship.vy = 0;
     ship.vx = 0;
-    ship.angle = 0;
+    
+    // Apply a less obtrusive style for success
+    msgEl.classList.add('success');
+
+    msgEl.innerHTML = `
+      <div style="font-family: 'Press Start 2P', monospace; font-size: 22px; color: #0f0; text-shadow: 0 0 10px #0f0;">
+        ${msg}
+      </div>
+      <div style="font-size: 14px; color: #8f8; font-family: 'Press Start 2P', monospace; margin-top: 10px;">
+        PRESS 'O' TO EXPLORE • THRUST TO TAKE-OFF
+      </div>`;
+    
+    if (!firstLandingDone) {
+      firstLandingDone = true;
+      currentDialogueIndex = 0;
+      setTimeout(() => {
+        showNextDialogue();
+      }, 1000);
+    }
+  } else {
+    // Keep the original, intrusive style for crashes
+    msgEl.classList.add('crash');
+    msgEl.innerHTML = `
+      <div style="font-family: 'Press Start 2P', monospace; font-size: 28px; color: #f00; text-shadow: 0 0 10px #f00, 0 0 20px #f00, 0 0 30px #f00; margin-bottom: 15px;">
+        ${msg}
+      </div>
+      <div style="font-size: 14px; color: #f88; text-shadow: 0 0 5px #f00; font-family: 'Press Start 2P', monospace;">
+        PRESS 'R' TO RESTART
+      </div>`;
   }
+  
+  msgEl.style.display = 'block';
   if(sounds.thrust) sounds.thrust.gain.gain.value = 0;
 }
 
 function updateShip() {
-  if (keys['arrowleft'] || keys['a']) ship.angle -= 0.05;
-  if (keys['arrowright'] || keys['d']) ship.angle += 0.05;
-  
-  ship.thrusting = (keys['arrowup'] || keys['w']) && ship.fuel > 0;
-  
-  if(sounds.thrust && isAudioUnlocked) {
-    sounds.thrust.gain.gain.value = (ship.thrusting && !isMusicMuted) ? 0.2 : 0;
-    if (ship.thrusting) sounds.thrust.filter.frequency.value = 200 + Math.random() * 50;
-  }
-  
-  if(ship.thrusting) {
-    if (!godModeEnabled) {
-        ship.fuel -= 0.5;
-        if (ship.fuel < 0) ship.fuel = 0;
+    if (gameState !== 'playing') return;
+
+    // 1. APPLY FORCES (Rotation, Thrust, Gravity)
+    if (keys['arrowleft'] || keys['a']) ship.angle -= 0.05;
+    if (keys['arrowright'] || keys['d']) ship.angle += 0.05;
+
+    ship.thrusting = (keys['arrowup'] || keys['w']) && ship.fuel > 0;
+
+    if (ship.thrusting) {
+        if (!godModeEnabled) {
+            ship.fuel -= 0.5;
+            if (ship.fuel < 0) ship.fuel = 0;
+        }
+        const thrustPower = 0.2;
+        ship.vx += Math.sin(ship.angle) * thrustPower;
+        ship.vy -= Math.cos(ship.angle) * thrustPower;
+        
+        if (sounds.thrust && isAudioUnlocked) {
+            sounds.thrust.gain.gain.value = !isMusicMuted ? 0.2 : 0;
+            sounds.thrust.filter.frequency.value = 200 + Math.random() * 50;
+        }
+        const flameX = ship.x - Math.sin(ship.angle) * 20;
+        const flameY = ship.y + Math.cos(ship.angle) * 20;
+        for (let i = 0; i < 5; i++) {
+            const particleAngle = ship.angle + (Math.random() - 0.5) * 0.5;
+            const speed = 2 + Math.random() * 3;
+            createParticle(flameX, flameY, ship.vx - Math.sin(particleAngle) * speed, ship.vy + Math.cos(particleAngle) * speed, 'rgb(255, 150, 0)');
+        }
+    } else if (sounds.thrust) {
+        sounds.thrust.gain.gain.value = 0;
     }
-    ship.vx += Math.sin(ship.angle) * 0.1;
-    ship.vy -= Math.cos(ship.angle) * 0.1;
+
+    ship.vy += SHIP_GRAVITY;
     
-    const flameX = ship.x + Math.sin(ship.angle) * 8;
-    const flameY = ship.y + Math.cos(ship.angle) * 8;
-    for (let i = 0; i < 2; i++) {
-      createParticle(flameX, flameY, ship.vx + (Math.random() - 0.5) * 2, ship.vy + 1 + Math.random() * 2, 'rgb(255, 150, 0)');
-    }
-  }
-  
-  ship.vy += SHIP_GRAVITY;
-  ship.vx *= 0.999;
-  ship.vy *= 0.999;
-  ship.x += ship.vx;
-  ship.y += ship.vy;
-  ship.x = ((ship.x % TERRAIN_WIDTH) + TERRAIN_WIDTH) % TERRAIN_WIDTH;
-  
-  const groundY = getGroundY(ship.x);
-  const altitude = groundY - ship.y - 15;
-  ship.legExtension = altitude < 100 ? Math.min(1, ship.legExtension + 0.1) : Math.max(0, ship.legExtension - 0.1);
-  
-  if (altitude <= 0) {
-    let onPad = ship.x > pad.x && ship.x < pad.x + pad.w;
-    let vSpeed = Math.abs(ship.vy);
-    let hSpeed = Math.abs(ship.vx);
-    let upright = Math.abs(ship.angle) < 0.3;
-    
-    // --- MODIFIED LANDING LOGIC ---
-    if (vSpeed < 1.5 && hSpeed < 0.8 && upright) {
-      const message = onPad ? 'PERFECT LANDING!' : 'SAFE LANDING!';
-      endGame(message, true);
-      playEffect('land');
+    // 2. UPDATE POSITION
+    ship.x += ship.vx;
+    ship.y += ship.vy;
+    ship.x = ((ship.x % TERRAIN_WIDTH) + TERRAIN_WIDTH) % TERRAIN_WIDTH; // World wrapping
+
+    // 3. COLLISION DETECTION
+    const groundY = getGroundY(ship.x);
+    const shipBottom = ship.y + 30; // Ship height from center to bottom
+
+    if (shipBottom >= groundY) {
+        // We've hit the ground
+        const vSpeed = Math.abs(ship.vy);
+        const hSpeed = Math.abs(ship.vx);
+        const angleOK = Math.abs((ship.angle * 180 / Math.PI) % 360) < 15;
+
+        // CRASH DETECTION
+        if (vSpeed > 1.5 || hSpeed > 0.8 || !angleOK) {
+             let reason = 'CRASHED! ';
+             if (vSpeed > 1.5) reason += 'IMPACT TOO HARD';
+             else if (hSpeed > 0.8) reason += 'MOVING TOO FAST';
+             else reason += 'ANGLE TOO STEEP';
+             endGame(reason, false);
+             playEffect('crash');
+             return;
+        }
+
+        // SUCCESSFUL LANDING with natural physics
+        ship.y = groundY - 30; // Place ship at ground level
+        
+        // Apply dampening to simulate landing gear absorbing impact
+        ship.vy = ship.vy * -0.2; // Small bounce with dampening
+        ship.vx *= 0.8; // Friction
+        
+        // Once settled (minimal velocity), consider it fully landed
+        if (Math.abs(ship.vy) < 0.15 && Math.abs(ship.vx) < 0.1) {
+            ship.vy = 0;
+            ship.vx = 0;
+            ship.angle = 0;
+            
+            let onPad = ship.x > pad.x && ship.x < pad.x + pad.w;
+            endGame(onPad ? 'PERFECT LANDING!' : 'SAFE LANDING!', true);
+            playEffect('land');
+        }
     } else {
-      let reason = !upright ? 'BAD ANGLE' : 'TOO FAST';
-      endGame(`CRASHED! ${reason}`, false);
-      playEffect('crash');
+        // No collision, normal flight
+        ship.vx *= 0.999;
+        ship.vy *= 0.999;
     }
-  }
-  
-  fuelPickups.forEach(pickup => {
-    if (!pickup.collected && Math.hypot(ship.x - pickup.x, ship.y - pickup.y) < 20) {
-      pickup.collected = true;
-      document.getElementById('fuelPacks').textContent = parseInt(document.getElementById('fuelPacks').textContent) + 1;
-    }
-  });
+
+    // 4. UPDATE LEG EXTENSION
+    const legY = ship.y + 12 + Math.cos(30 * ship.legExtension * Math.PI/180) * (25 + 20 * ship.legExtension);
+    const altitude = getGroundY(ship.x) - legY;
+    ship.legExtension = altitude < 150 ? Math.min(1, ship.legExtension + 0.05) : Math.max(0, ship.legExtension - 0.05);
+
+    // 5. Fuel pickup logic - tighter hitbox for better gameplay
+    fuelPickups.forEach(pickup => {
+        if (!pickup.collected && Math.hypot(ship.x - pickup.x, ship.y - pickup.y) < 20) {
+            pickup.collected = true;
+            document.getElementById('fuelPacks').textContent = parseInt(document.getElementById('fuelPacks').textContent) + 1;
+            showPopup('+1 Fuel Pack');
+        }
+    });
 }
 
 function updateAstronaut() {
@@ -707,6 +1130,7 @@ function updateAstronaut() {
     if (!pickup.collected && Math.hypot(astronaut.x - pickup.x, astronaut.y - pickup.y) < 15) {
       pickup.collected = true;
       document.getElementById('fuelPacks').textContent = parseInt(document.getElementById('fuelPacks').textContent) + 1;
+      showPopup('+1 Fuel Pack');
     }
   });
   
@@ -716,34 +1140,51 @@ function updateAstronaut() {
     if (fuelPacksCount > 0) {
       ship.fuel = 100;
       document.getElementById('fuelPacks').textContent = '0';
-      const msgEl = document.getElementById('msg');
-      msgEl.textContent = 'FUEL DEPOSITED!';
-      msgEl.style.display = 'block';
-      msgEl.style.color = '#0f0';
-      setTimeout(() => {
-        if (gameState === 'exploring') msgEl.style.display = 'none';
-      }, 2000);
+      showPopup('Ship Refueled!');
     }
   }
 }
 
 function update(dt) {
+  if (gameState === 'title') {
+    // Only update splash screen elements
+    return;
+  }
+
+  // Update background stars
   stars.forEach(s => {
     s.y += s.speed;
     if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
   });
 
-  updateParticles();
   const controlsEl = document.getElementById('controls');
+
+  // Calculate target camera position
+  let targetCamX = 0;
+  let targetCamY = 0;
 
   switch (gameState) {
     case 'playing':
       updateShip();
-      camera.x = ship.x - W / 2;
+      // Camera follows ship with smoothing, including when flying high (space)
+      targetCamX = ship.x - W / 2;
+      // If ship is well above the ground, let camera follow ship.y fully (space effect)
+      const groundY = getGroundY(ship.x);
+      if (ship.y < groundY - H * 0.6) {
+        // In space: camera follows ship.y
+        targetCamY = ship.y - H / 2;
+      } else {
+        // Near moon: camera follows terrain
+        targetCamY = Math.min(ship.y - H / 2, groundY - H * 0.8);
+      }
       break;
     case 'landed':
+      targetCamX = ship.x - W / 2;
+      targetCamY = getGroundY(ship.x) - H * 0.8;
       if (keys['arrowup'] || keys['w']) {
         gameState = 'playing';
+        ship.vy = -0.5;
+        ship.y -= 2;
         document.getElementById('msg').style.display = 'none';
         controlsEl.innerHTML = 'W/↑ THRUST | A/D ROTATE | R RESTART | ESC MENU';
       }
@@ -751,7 +1192,7 @@ function update(dt) {
         gameState = 'exploring';
         astronaut.visible = true;
         astronaut.x = ship.x + 10;
-        astronaut.y = ship.y - astronaut.h;
+        astronaut.y = getGroundY(ship.x) - astronaut.h;
         astronaut.onGround = true;
         document.getElementById('msg').style.display = 'none';
         delete keys['o'];
@@ -759,25 +1200,54 @@ function update(dt) {
       break;
     case 'exploring':
       updateAstronaut();
-      camera.x = astronaut.x - W / 2;
+      targetCamX = astronaut.x - W / 2;
+      targetCamY = getGroundY(astronaut.x) - H * 0.8;
       const dist = Math.hypot(astronaut.x - ship.x, astronaut.y - ship.y);
       if (dist < 50) {
         controlsEl.innerHTML = "Press 'O' to board ship";
         if (keys['o']) {
           gameState = 'landed';
           astronaut.visible = false;
-          camera.x = ship.x - W / 2;
           const onPad = ship.x > pad.x && ship.x < pad.x + pad.w;
-          const message = onPad ? 'PERFECT LANDING!' : 'SAFE LANDING!';
-          document.getElementById('msg').textContent = message + " | 'O' to Explore | Thrust to Take-Off";
-          document.getElementById('msg').style.display = 'block';
+          endGame(onPad ? 'PERFECT LANDING!' : 'SAFE LANDING!', true);
           delete keys['o'];
         }
       } else {
         controlsEl.innerHTML = 'A/D or ←/→ MOVE | SPACE JUMP | R RESTART | ESC MENU';
       }
+      const monolithDist = Math.hypot(astronaut.x - (monolith.x + monolith.w/2), astronaut.y - (monolith.y + monolith.h/2));
+      if (monolithDist < 50 && !undertaleBoxActive && !monolithDialogueActive) {
+        monolithDialogueActive = true;
+        currentMonolithDialogueIndex = 0;
+        showNextDialogue();
+      }
       break;
   }
+
+  // Camera follows smoothly, but speeds up if ship would go off screen
+  let CAMERA_SMOOTHING = 0.15;
+  
+  if (gameState === 'playing') {
+    // Check if ship would be off screen with current camera
+    const shipScreenY = ship.y - camera.y;
+    const shipScreenX = ship.x - camera.x;
+    
+    // If ship is close to screen edge, follow directly (no lag)
+    if (shipScreenY < H * 0.2 || shipScreenY > H * 0.8 || 
+        shipScreenX < W * 0.2 || shipScreenX > W * 0.8) {
+      CAMERA_SMOOTHING = 1.0; // Instant follow
+    } else {
+      CAMERA_SMOOTHING = 0.3; // Faster follow during flight
+    }
+  }
+  
+  camera.x += (targetCamX - camera.x) * CAMERA_SMOOTHING;
+  camera.y += (targetCamY - camera.y) * CAMERA_SMOOTHING;
+  
+  // Allow camera to follow the ship into space (upwards) but limit how far above the screen it can go
+  camera.y = Math.max(-H * 10, camera.y); // Allow scrolling up to 10 screens high
+
+  updateParticles();
 }
 
 function drawAstronaut() {
@@ -792,23 +1262,37 @@ function drawAstronaut() {
 function drawWorld() {
   ctx.fillStyle = moonPatternFill;
   ctx.beginPath();
-  ctx.moveTo(-1, H); // Start slightly left to prevent seam
+  ctx.moveTo(-1, H);
   terrain.forEach(p => ctx.lineTo(p.x, p.y));
-  ctx.lineTo(TERRAIN_WIDTH + 1, H); // End slightly right
+  ctx.lineTo(TERRAIN_WIDTH + 1, H);
   ctx.closePath();
   ctx.fill();
   
-  // Add a highlight to the top edge for a 3D pixel-art effect
-  ctx.strokeStyle = '#878792'; // A lighter grey from our pattern
-  ctx.lineWidth = 2;
+  ctx.fillStyle = '#111';
+  ctx.fillRect(monolith.x, monolith.y, monolith.w, monolith.h);
+  ctx.fillStyle = 'red';
+  ctx.globalAlpha = Math.sin(Date.now() * 0.005) * 0.5 + 0.5;
+  ctx.fillRect(monolith.x + monolith.w / 2 - 2, monolith.y + 10, 4, 4);
+  ctx.globalAlpha = 1;
+
+  ctx.strokeStyle = '#7a7a83';
+  ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.moveTo(terrain[0].x, terrain[0].y);
   for(let i = 1; i < terrain.length; i++) {
       ctx.lineTo(terrain[i].x, terrain[i].y);
   }
   ctx.stroke();
+  
+  ctx.strokeStyle = '#3a3a43';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(terrain[0].x, terrain[0].y + 2);
+  for(let i = 1; i < terrain.length; i++) {
+      ctx.lineTo(terrain[i].x, terrain[i].y + 2);
+  }
+  ctx.stroke();
 
-  // Draw fuel pickups
   fuelPickups.forEach(pickup => {
     if (!pickup.collected) {
       ctx.fillStyle = '#0f0';
@@ -846,62 +1330,102 @@ function drawWorld() {
   ctx.translate(ship.x, ship.y);
   ctx.rotate(ship.angle);
   
-  let bodyGradient = ctx.createLinearGradient(-8, -12, 8, 12);
+  let bodyGradient = ctx.createLinearGradient(0, -36, 0, 15);
   bodyGradient.addColorStop(0, '#fff');
-  bodyGradient.addColorStop(1, '#ccc');
+  bodyGradient.addColorStop(0.7, '#ccc');
+  bodyGradient.addColorStop(1, '#aaa');
   ctx.fillStyle = bodyGradient;
+  
   ctx.beginPath();
-  ctx.moveTo(0, -12);
-  ctx.lineTo(-8, 10);
-  ctx.lineTo(8, 10);
+  ctx.moveTo(0, -36);
+  ctx.lineTo(-20, 15);
+  ctx.lineTo(20, 15);
   ctx.closePath();
   ctx.fill();
   
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-10, -20);
+  ctx.lineTo(10, -20);
+  ctx.moveTo(-15, 0);
+  ctx.lineTo(15, 0);
+  ctx.stroke();
+  
   ctx.fillStyle = '#001144';
   ctx.beginPath();
-  ctx.arc(0, -3, 4, 0, Math.PI * 2);
+  ctx.arc(0, -25, 8, 0, Math.PI * 2);
   ctx.fill();
+  
   ctx.fillStyle = 'rgba(100, 200, 255, 0.6)';
   ctx.beginPath();
-  ctx.arc(-1, -4, 2, 0, Math.PI * 2);
+  ctx.arc(-2, -27, 4, 0, Math.PI * 2);
   ctx.fill();
   
+  ctx.fillStyle = '#666';
+  ctx.fillRect(-22, 5, 4, 8);
+  ctx.fillRect(18, 5, 4, 8);
+  
   ctx.strokeStyle = '#888';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 4;
   
-  let legAngle = 25 * ship.legExtension;
-  let legLength = 10 + 8 * ship.legExtension;
+  let legAngle = 30 * ship.legExtension;
+  let legLength = 25 + 20 * ship.legExtension;
   
   ctx.beginPath();
-  ctx.moveTo(-6, 8);
-  ctx.lineTo(-6 - Math.sin(legAngle * Math.PI/180) * legLength, 8 + Math.cos(legAngle * Math.PI/180) * legLength);
+  ctx.moveTo(-15, 12);
+  let leftLegX = -15 - Math.sin(legAngle * Math.PI/180) * legLength;
+  let leftLegY = 12 + Math.cos(legAngle * Math.PI/180) * legLength;
+  ctx.lineTo(leftLegX, leftLegY);
   ctx.stroke();
   
   ctx.beginPath();
-  ctx.moveTo(6, 8);
-  ctx.lineTo(6 + Math.sin(legAngle * Math.PI/180) * legLength, 8 + Math.cos(legAngle * Math.PI/180) * legLength);
+  ctx.moveTo(15, 12);
+  let rightLegX = 15 + Math.sin(legAngle * Math.PI/180) * legLength;
+  let rightLegY = 12 + Math.cos(legAngle * Math.PI/180) * legLength;
+  ctx.lineTo(rightLegX, rightLegY);
   ctx.stroke();
   
-  if(ship.legExtension > 0.5) {
+  if(ship.legExtension > 0.3) {
     ctx.fillStyle = '#444';
-    ctx.fillRect(-6 - Math.sin(legAngle * Math.PI/180) * legLength - 3, 8 + Math.cos(legAngle * Math.PI/180) * legLength - 2, 6, 3);
-    ctx.fillRect(6 + Math.sin(legAngle * Math.PI/180) * legLength - 3, 8 + Math.cos(legAngle * Math.PI/180) * legLength - 2, 6, 3);
+    ctx.fillRect(leftLegX - 8, leftLegY - 4, 16, 6);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(leftLegX - 6, leftLegY - 2, 12, 2);
+    
+    ctx.fillStyle = '#444';
+    ctx.fillRect(rightLegX - 8, rightLegY - 4, 16, 6);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(rightLegX - 6, rightLegY - 2, 12, 2);
+    
+    ctx.strokeStyle = '#777';
+    ctx.lineWidth = 2;
+    for(let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-15 - i * 3, 12 + i * 4);
+      ctx.lineTo(leftLegX + i * 2, leftLegY - 4);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(15 + i * 3, 12 + i * 4);
+      ctx.lineTo(rightLegX - i * 2, rightLegY - 4);
+      ctx.stroke();
+    }
   }
   
   if(ship.thrusting) {
-    let flameGradient = ctx.createRadialGradient(0, 12, 0, 0, 12, 20);
+    let flameGradient = ctx.createRadialGradient(0, 24, 0, 0, 24, 40);
     flameGradient.addColorStop(0, 'rgba(255, 255, 200, 0.9)');
     flameGradient.addColorStop(0.4, 'rgba(255, 150, 0, 0.7)');
     flameGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
     
     ctx.fillStyle = flameGradient;
-    let flameSize = 15 + Math.random() * 10;
+    let flameSize = 30 + Math.random() * 20;
     ctx.beginPath();
-    ctx.moveTo(-5, 10);
-    ctx.lineTo(-3, 10 + flameSize);
-    ctx.lineTo(0, 10 + flameSize * 1.3);
-    ctx.lineTo(3, 10 + flameSize);
-    ctx.lineTo(5, 10);
+    ctx.moveTo(-10, 20);
+    ctx.lineTo(-6, 20 + flameSize);
+    ctx.lineTo(0, 20 + flameSize * 1.3);
+    ctx.lineTo(6, 20 + flameSize);
+    ctx.lineTo(10, 20);
     ctx.fill();
   }
   
@@ -909,9 +1433,11 @@ function drawWorld() {
 }
 
 function draw() {
-  ctx.imageSmoothingEnabled = false; // Keep pixels crisp
+  // Don't draw game canvas during title screen - splash handles itself
+  if (gameState === 'title') return;
 
-  // --- REMOVED BLUE TINT - SOLID DARK BACKGROUND ---
+  ctx.imageSmoothingEnabled = false;
+
   ctx.fillStyle = '#050508';
   ctx.fillRect(0, 0, W, H);
   
@@ -923,9 +1449,8 @@ function draw() {
   ctx.globalAlpha = 1;
 
   ctx.save();
-  ctx.translate(-camera.x, 0);
+  ctx.translate(-camera.x, -camera.y);
 
-  // Draw main world and its two wrapped copies for seamless scrolling
   drawWorld();
   ctx.save();
   ctx.translate(-TERRAIN_WIDTH, 0);
@@ -941,10 +1466,17 @@ function draw() {
 
   ctx.restore();
   
-  // Update HUD
+  drawRadar();
+
   document.getElementById('fuel').textContent = godModeEnabled ? '∞' : Math.round(ship.fuel);
   document.getElementById('fuel').className = ship.fuel < 20 && !godModeEnabled ? 'critical' : '';
-  const altitude = gameState === 'exploring' ? getGroundY(astronaut.x) - astronaut.y - astronaut.h : getGroundY(ship.x) - ship.y - 15;
+  let altitude = 0;
+  if(gameState === 'exploring') {
+    altitude = getGroundY(astronaut.x) - (astronaut.y + astronaut.h);
+  } else {
+    const legY = ship.y + 12 + Math.cos(30 * ship.legExtension * Math.PI/180) * (25 + 20 * ship.legExtension);
+    altitude = getGroundY(ship.x) - legY;
+  }
   document.getElementById('alt').textContent = Math.round(altitude);
   document.getElementById('vspeed').textContent = (ship.vy * 50).toFixed(1);
   document.getElementById('hspeed').textContent = (Math.abs(ship.vx) * 50).toFixed(1);
@@ -955,18 +1487,28 @@ let lastTime = 0;
 function loop(time) {
   let dt = (time - lastTime) / 1000;
   lastTime = time;
+  
+  // Always update and draw based on game state
   update(dt);
   draw();
+  
   requestAnimationFrame(loop);
 }
 
-// --- INITIALIZATION ---
+// Reset game state to title
+gameState = 'title';
+
+// Initialize game componentsl
 makeTerrain();
 const patternCanvas = createMoonPattern();
-moonPatternFill = ctx.createPattern(patternCanvas, 'repeat');
+const moonPatternFill = ctx.createPattern(patternCanvas, 'repeat');
+
+// Initialize splash screen
+setupSplashScreen();
+
+// Start game loop
 requestAnimationFrame(loop);
 
 </script>
 </body>
 </html>
-
